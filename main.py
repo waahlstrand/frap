@@ -52,8 +52,7 @@ optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
 
 #train= tqdm.tqdm(trainloader)
 train = trainloader
-loop = tqdm.tqdm(epochs)
-for epoch in loop:
+for epoch in epochs:
 
     # Zero grad with the model
     model.zero_grad()
@@ -61,9 +60,11 @@ for epoch in loop:
     running_loss = 0
 
 
-    for X, target in train:
+    for i, batch in enumerate(train):
 
         ########### TRAINING #############
+        X = batch[0]
+        target = batch[1]
 
         # Zero the gradient from previous computation
         optimizer.zero_grad()
@@ -80,15 +81,14 @@ for epoch in loop:
         # Should we clip the gradient? 
         # nn.utils.clip_grad_norm_(model.parameters(), clip)        
         optimizer.step()
-
-        running_loss += loss.item()
+        
+        running_loss += loss.detach().item()
 
         ############ VALIDATION #############
         with torch.no_grad():
             pass
     
-    loop.set_description('Epoch {}/{}'.format(epoch + 1, N_EPOCHS))
-    loop.set_postfix(loss=running_loss.item()/batch_size)
+    print('Epoch:  %d | Loss: %.4f | ' % (epoch, running_loss))
 
 
 
