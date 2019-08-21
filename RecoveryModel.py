@@ -98,10 +98,82 @@ class RecoveryDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
 
-        return self.inputs[idx, :], self.targets[idx, :]
+        return {"sample" :self.inputs[idx, :], "target":self.targets[idx, :]}
 
 
 
+
+def fit(model, data, options):
+
+    model.train()
+
+    train   = data["train"]
+
+    model.zero_grad()
+    running_loss = 0
+
+    for i, batch in enumerate(train):
+
+        X = batch["sample"]
+        y = batch["target"]
+
+        options.optimizer.zero_grad()
+
+        # Feed forward the data
+        prediction = model(X)
+
+        # Calculate the MSE loss
+        loss = options.criterion(prediction, y)
+
+        # Backpropagate the loss
+        loss.backward()
+
+        # Should we clip the gradient? 
+        # nn.utils.clip_grad_norm_(model.parameters(), clip)        
+        options.optimizer.step()
+        
+        running_loss += loss.detach().item()
+
+    return running_loss/len(train)
+
+
+def validate(model, data, options):
+
+    # Set evaluation mode, equivalent but faster than model.eval()
+    model.eval()
+
+    with torch.no_grad():
+
+        val = data["val"]
+
+        running_loss = 0
+
+        for i, batch in enumerate(val):
+
+            X = batch["sample"]
+            y = batch["target"]
+
+            # Feed forward the data
+            prediction = model(X)
+
+            # Calculate the MSE loss
+            loss = options.criterion(prediction, y)
+            
+            running_loss += loss.detach().item()
+
+        return running_loss/len(val)
+
+def predict(model, data):
+
+    # Initialize evaluation mode
+    model.eval(True)
+
+    # Make single prediction from data
+    prediction = model(data)
+
+    model.eval(False)
+
+    return prediction
 
 
 dataset = RecoveryDataset(root_dir = "rcs")
