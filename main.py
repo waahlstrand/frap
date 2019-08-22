@@ -8,14 +8,18 @@ from attrdict import AttrDict
 import time
 from RecoveryModel import RecoveryModel, RecoveryDataset, fit, validate, predict
 
-
+import os
 from datetime import datetime
+
 now = datetime.now()
 log_dir = "logs/" + now.strftime("%Y%m%d-%H%M%S") + "/"
-model_dir = "models/"
+model_dir = "models/" + now.strftime("%Y%m%d-%H%M%S") + "/"
 
 # torch.cuda.is_available() checks and returns a Boolean True if a GPU is available, else it'll return False
 cuda_available = torch.cuda.is_available()
+
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152
+os.environ["CUDA_VISIBLE_DEVICES"]="1"
 
 # If we have a GPU available, we'll set our device to GPU. We'll use this device variable later in our code.
 if cuda_available:
@@ -32,7 +36,7 @@ writer = SummaryWriter(log_dir)
 # Define constants
 INPUT_SIZE  = 1
 OUTPUT_SIZE = 3
-N_EPOCHS    = 7
+N_EPOCHS    = 50
 
 
 # Define hyperparameters
@@ -56,6 +60,7 @@ valloader   = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, sh
 
 # Create model
 model = RecoveryModel(INPUT_SIZE, hidden_size, batch_size, OUTPUT_SIZE, n_layers=n_layers)
+model = model.to(device)
 
 # Define loss and optimizer
 criterion = nn.MSELoss(reduction="mean")
@@ -69,7 +74,8 @@ data = {"train": trainloader,
         "val": valloader}
 
 options = AttrDict({"optimizer": optimizer,
-                    "criterion": criterion})
+                    "criterion": criterion,
+                    "device": device})
 
 
 print("Starting the training loop...")

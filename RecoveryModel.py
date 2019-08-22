@@ -38,7 +38,9 @@ class RecoveryModel(nn.Module):
         Returns:
             (torch.Tensor, torch.Tensor) -- A tuple of zero tensors of dimension (number of layers, batch size, hidden size)
         """
-        (h, c) = (torch.zeros(self.n_layers, self.batch_size, self.hidden_size), torch.zeros(self.n_layers, self.batch_size, self.hidden_size))
+        device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+
+        (h, c) = (torch.zeros(self.n_layers, self.batch_size, self.hidden_size).to(device), torch.zeros(self.n_layers, self.batch_size, self.hidden_size).to(device))
 
         return (h, c)
 
@@ -112,10 +114,11 @@ def fit(model, data, options):
     model.zero_grad()
     running_loss = 0
 
+
     for i, batch in enumerate(train):
 
-        X = batch["sample"]
-        y = batch["target"]
+        X = batch["sample"].to(options.device)
+        y = batch["target"].to(options.device)
 
         options.optimizer.zero_grad()
 
@@ -150,8 +153,8 @@ def validate(model, data, options):
 
         for i, batch in enumerate(val):
 
-            X = batch["sample"]
-            y = batch["target"]
+            X = batch["sample"].to(options.device)
+            y = batch["target"].to(options.device)
 
             # Feed forward the data
             prediction = model(X)
