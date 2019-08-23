@@ -144,6 +144,8 @@ def validate(model, data, options):
     # Set evaluation mode, equivalent but faster than model.eval()
     model.eval()
 
+    model.zero_grad()
+
     with torch.no_grad():
 
         val = data["val"]

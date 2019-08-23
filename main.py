@@ -7,6 +7,7 @@ from attrdict import AttrDict
 
 import time
 from RecoveryModel import RecoveryModel, RecoveryDataset, fit, validate, predict
+from model import LSTM_to_FFNN
 
 import os
 from datetime import datetime
@@ -42,9 +43,10 @@ N_EPOCHS    = 200
 # Define hyperparameters
 hidden_size     = 64
 n_layers        = 2
+dropout         = 0.5
 train_batch_size  = 256
 eval_batch_size = 256
-learning_rate   = 0.0001
+learning_rate   = 0.0005
 clip            = 0
 epochs          = range(0, N_EPOCHS)
 
@@ -60,12 +62,14 @@ valloader   = torch.utils.data.DataLoader(val_dataset, batch_size=eval_batch_siz
 
 
 # Create model
-model = RecoveryModel(INPUT_SIZE, hidden_size, OUTPUT_SIZE, n_layers=n_layers)
+#model = RecoveryModel(INPUT_SIZE, hidden_size, OUTPUT_SIZE, n_layers=n_layers)
+model = LSTM_to_FFNN(INPUT_SIZE, hidden_size, OUTPUT_SIZE, dropout=dropout, n_layers=n_layers)
 model = model.to(device)
 
 # Define loss and optimizer
 criterion = nn.MSELoss(reduction="mean")
-optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+#optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
 
 
 #train= tqdm.tqdm(trainloader)
