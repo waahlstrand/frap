@@ -31,12 +31,12 @@ class LSTM_to_FFNN(nn.Module):
 
         # Define model components
         self.LSTM   = nn.LSTM(self.input_size, self.hidden_size, self.n_layers, dropout = self.dropout)
-        #self.dense  = nn.Linear(self.hidden_size, self.hidden_size)
-        self.dense1 = nn.Linear(self.hidden_size, 512)
-        self.dense2 = nn.Linear(512, 1024)
-        self.dense3 = nn.Linear(1024, 128)
-        self.linear = nn.Linear(128, self.output_size)
-        #self.linear = nn.Linear(self.hidden_size, self.output_size)
+        self.dense  = nn.Linear(self.hidden_size, self.hidden_size)
+        #self.dense1 = nn.Linear(self.hidden_size, 512)
+        #self.dense2 = nn.Linear(512, 1024)
+        #self.dense3 = nn.Linear(1024, 128)
+        #self.linear = nn.Linear(128, self.output_size)
+        self.linear = nn.Linear(self.hidden_size, self.output_size)
 
     def initialize_hidden_state(self, batch_size):
         """Initializes the hidden state of an LSTM at t = 0 as zero. Hidden size
@@ -68,12 +68,12 @@ class LSTM_to_FFNN(nn.Module):
         # Assert that x has dim (sequence length, batch size, input size)
         output, hidden = self.LSTM(x.view(-1, batch_size, self.input_size), hidden)
 
-        #output = F.relu(self.dense(output[-1]))
-        #output = F.relu(self.dense(output))
+        output = F.relu(self.dense(output[-1]))
+        output = F.relu(self.dense(output))
 
-        output = F.relu(self.dense1(output[-1]))
-        output = F.relu(self.dense2(output))
-        output = F.relu(self.dense3(output))
+        #output = F.relu(self.dense1(output[-1]))
+        #output = F.relu(self.dense2(output))
+        #output = F.relu(self.dense3(output))
 
         y = self.linear(output)
 
@@ -104,11 +104,7 @@ class Convolutional1D(nn.Module):
         self.linear3 = nn.Linear(16, 3)
 
     def forward(self, x):
-        """[summary]
-        
-        Arguments:
-            x {torch.Tensor} -- A torch tensor with shape (batch size, number of channels, sequence length)
-        """
+
 
         # First convolutional layer 
         # (N x 1 x L) -> conv(1, 64)  
@@ -122,8 +118,32 @@ class Convolutional1D(nn.Module):
         # Fully connected layer
         x = F.relu(self.linear1(x))
         x = F.relu(self.linear2(x))
-        y = F.relu(self.linear3(x))
+        y = self.linear3(x)
 
         return y
 
+
+class FFNN(nn.Module):
+    
+    def __init__(self):
+
+        super(FFNN, self).__init__()
+
+        self.fc1 = nn.Linear(110, 128)
+        self.fc2 = nn.Linear(128, 512)
+        self.fc3 = nn.Linear(512, 1024)
+        self.fc4 = nn.Linear(1024, 512)
+        self.fc5 = nn.Linear(512, 128)
+        self.fc6 = nn.Linear(128, 3)
+
+    def forward(self, x):
+
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
+        x = F.relu(self.fc4(x))
+        x = F.relu(self.fc5(x))
+        y = self.fc6(x)
+
+        return y
 
