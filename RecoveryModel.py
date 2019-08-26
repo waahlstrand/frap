@@ -138,7 +138,7 @@ def fit(model, data, options):
         
         running_loss += loss.detach().item()
 
-    return running_loss/len(train)
+    return running_loss/len(train.dataset)
 
 
 def validate(model, data, options):
@@ -167,7 +167,7 @@ def validate(model, data, options):
             
             running_loss += loss.detach().item()
 
-        return running_loss/len(val)
+        return running_loss/len(val.dataset)
 
 def predict(model, data):
 

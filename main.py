@@ -67,7 +67,7 @@ model = LSTM_to_FFNN(INPUT_SIZE, hidden_size, OUTPUT_SIZE, dropout=dropout, n_la
 model = model.to(device)
 
 # Define loss and optimizer
-criterion = nn.MSELoss(reduction="mean")
+criterion = nn.MSELoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
 #optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
 
