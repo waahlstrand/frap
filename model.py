@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
+import torch.nn.functional as F
 
 from torch.utils.data import Dataset, DataLoader
 
@@ -63,9 +64,58 @@ class LSTM_to_FFNN(nn.Module):
         # Assert that x has dim (sequence length, batch size, input size)
         output, hidden = self.LSTM(x.view(-1, batch_size, self.input_size), hidden)
 
-        output = self.dense(output[-1])
-        output = self.dense(output)
+        output = F.relu(self.dense(output[-1]))
+        output = F.relu(self.dense(output))
 
-        y = self.linear(output)
+        y = F.relu(self.linear(output))
 
         return y
+
+
+class Convolutional1D(nn.Module):
+
+    def __init__(self, sequence_length, input_size, output_size):
+        
+        super(Convolutional1D, self).__init__()
+
+        self.sequence_length    = sequence_length
+        self.input_size         = input_size
+        self.output_size        = output_size
+
+        kernel_size     = 2
+        stride          = 1
+
+        self.conv1  = nn.Conv1d(1, 64, kernel_size, stride)
+        self.bn1    = nn.BatchNorm1d(64)
+        self.conv2  = nn.Conv1d(64, 128, kernel_size, stride)
+        self.bn2    = nn.BatchNorm1d(128)
+
+        self.maxpool = nn.MaxPool1d(self.sequence_length)
+        self.linear1 = nn.Linear(128, 64)
+        self.linear2 = nn.Linear(64, 16)
+        self.linear3 = nn.Linear(16, 3)
+
+    def forward(self, x):
+        """[summary]
+        
+        Arguments:
+            x {torch.Tensor} -- A torch tensor with shape (batch size, number of channels, sequence length)
+        """
+
+        # First convolutional layer 
+        # (N x 1 x L) -> conv(1, 64)  
+        x = F.relu(self.bn1(self.conv1(x)))
+
+        # (N x 64 x L) -> conv(64, 128)
+        x = F.relu(self.bn2(self.conv2(x)))
+
+        x = self.maxpool(x).view(-1, 128)
+
+        # Fully connected layer
+        x = F.relu(self.linear1(x))
+        x = F.relu(self.linear2(x))
+        y = F.relu(self.linear3(x))
+
+        return y
+
+
