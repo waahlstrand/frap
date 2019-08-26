@@ -133,6 +133,8 @@ def fit(model, data, options):
         # Should we clip the gradient? 
         # nn.utils.clip_grad_norm_(model.parameters(), clip)        
         options.optimizer.step()
+
+        torch.nn.utils.clip_grad_norm_(model.parameters(), options.clip)
         
         running_loss += loss.detach().item()
 

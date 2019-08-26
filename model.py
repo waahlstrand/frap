@@ -31,8 +31,12 @@ class LSTM_to_FFNN(nn.Module):
 
         # Define model components
         self.LSTM   = nn.LSTM(self.input_size, self.hidden_size, self.n_layers, dropout = self.dropout)
-        self.dense  = nn.Linear(self.hidden_size, self.hidden_size)
-        self.linear = nn.Linear(self.hidden_size, self.output_size)
+        #self.dense  = nn.Linear(self.hidden_size, self.hidden_size)
+        self.dense1 = nn.Linear(self.hidden_size, 512)
+        self.dense2 = nn.Linear(512, 1024)
+        self.dense3 = nn.Linear(1024, 128)
+        self.linear = nn.Linear(128, self.output_size)
+        #self.linear = nn.Linear(self.hidden_size, self.output_size)
 
     def initialize_hidden_state(self, batch_size):
         """Initializes the hidden state of an LSTM at t = 0 as zero. Hidden size
@@ -64,10 +68,14 @@ class LSTM_to_FFNN(nn.Module):
         # Assert that x has dim (sequence length, batch size, input size)
         output, hidden = self.LSTM(x.view(-1, batch_size, self.input_size), hidden)
 
-        output = F.relu(self.dense(output[-1]))
-        output = F.relu(self.dense(output))
+        #output = F.relu(self.dense(output[-1]))
+        #output = F.relu(self.dense(output))
 
-        y = F.relu(self.linear(output))
+        output = F.relu(self.dense1(output[-1]))
+        output = F.relu(self.dense2(output))
+        output = F.relu(self.dense3(output))
+
+        y = self.linear(output)
 
         return y
 

@@ -47,7 +47,7 @@ dropout         = 0.5
 train_batch_size  = 256
 eval_batch_size = 256
 learning_rate   = 0.0005
-clip            = 0
+clip            = 5
 epochs          = range(0, N_EPOCHS)
 
 # Get dataset of recovery curves
@@ -68,8 +68,8 @@ model = model.to(device)
 
 # Define loss and optimizer
 criterion = nn.MSELoss(reduction="mean")
-#optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
+optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+#optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
 
 
 #train= tqdm.tqdm(trainloader)
@@ -80,6 +80,7 @@ data = {"train": trainloader,
 
 options = AttrDict({"optimizer": optimizer,
                     "criterion": criterion,
+                    "clip": clip,
                     "device": device})
 
 
