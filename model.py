@@ -80,22 +80,22 @@ class LSTM_to_FFNN(nn.Module):
         return y
 
 
-class Convolutional1D(nn.Module):
+class CNN1D(nn.Module):
 
     def __init__(self, sequence_length, input_size, output_size):
         
-        super(Convolutional1D, self).__init__()
+        super(CNN1D, self).__init__()
 
         self.sequence_length    = sequence_length
         self.input_size         = input_size
         self.output_size        = output_size
 
-        kernel_size     = 2
+        kernel_size     = 1
         stride          = 1
 
-        self.conv1  = nn.Conv1d(1, 64, kernel_size, stride)
+        self.conv1  = nn.Conv1d(1, 64, kernel_size)
         self.bn1    = nn.BatchNorm1d(64)
-        self.conv2  = nn.Conv1d(64, 128, kernel_size, stride)
+        self.conv2  = nn.Conv1d(64, 128, kernel_size)
         self.bn2    = nn.BatchNorm1d(128)
 
         self.maxpool = nn.MaxPool1d(self.sequence_length)
@@ -105,10 +105,10 @@ class Convolutional1D(nn.Module):
 
     def forward(self, x):
 
-
+        batch_size = x.shape[0]
         # First convolutional layer 
         # (N x 1 x L) -> conv(1, 64)  
-        x = F.relu(self.bn1(self.conv1(x)))
+        x = F.relu(self.bn1(self.conv1(x.view(batch_size, 1, -1))))
 
         # (N x 64 x L) -> conv(64, 128)
         x = F.relu(self.bn2(self.conv2(x)))

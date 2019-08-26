@@ -7,7 +7,7 @@ from attrdict import AttrDict
 
 import time
 from RecoveryModel import RecoveryModel, RecoveryDataset, fit, validate, predict
-from model import LSTM_to_FFNN
+from model import LSTM_to_FFNN, CNN1D, FFNN
 
 import os
 from datetime import datetime
@@ -38,6 +38,7 @@ writer = SummaryWriter(log_dir)
 INPUT_SIZE  = 1
 OUTPUT_SIZE = 3
 N_EPOCHS    = 200
+SEQUENCE_LENGTH = 110
 
 
 # Define hyperparameters
@@ -63,7 +64,8 @@ valloader   = torch.utils.data.DataLoader(val_dataset, batch_size=eval_batch_siz
 
 # Create model
 #model = RecoveryModel(INPUT_SIZE, hidden_size, OUTPUT_SIZE, n_layers=n_layers)
-model = LSTM_to_FFNN(INPUT_SIZE, hidden_size, OUTPUT_SIZE, dropout=dropout, n_layers=n_layers)
+#model = LSTM_to_FFNN(INPUT_SIZE, hidden_size, OUTPUT_SIZE, dropout=dropout, n_layers=n_layers)
+model = CNN1D(SEQUENCE_LENGTH, INPUT_SIZE, OUTPUT_SIZE)
 model = model.to(device)
 
 # Define loss and optimizer
