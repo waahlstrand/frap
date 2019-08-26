@@ -7,15 +7,20 @@ from attrdict import AttrDict
 
 import time
 from RecoveryModel import RecoveryModel, RecoveryDataset, fit, validate, predict
+from model import LSTM_to_FFNN
 
-
+import os
 from datetime import datetime
+
 now = datetime.now()
 log_dir = "logs/" + now.strftime("%Y%m%d-%H%M%S") + "/"
 model_dir = "models/" + now.strftime("%Y%m%d-%H%M%S") + ".pt"
 
 # torch.cuda.is_available() checks and returns a Boolean True if a GPU is available, else it'll return False
 cuda_available = torch.cuda.is_available()
+
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152
+os.environ["CUDA_VISIBLE_DEVICES"]="1"
 
 # If we have a GPU available, we'll set our device to GPU. We'll use this device variable later in our code.
 if cuda_available:
@@ -32,14 +37,16 @@ writer = SummaryWriter(log_dir)
 # Define constants
 INPUT_SIZE  = 1
 OUTPUT_SIZE = 3
-N_EPOCHS    = 7
+N_EPOCHS    = 200
 
 
 # Define hyperparameters
 hidden_size     = 64
-n_layers        = 1
-batch_size      = 256
-learning_rate   = 0.0001
+n_layers        = 2
+dropout         = 0.5
+train_batch_size  = 256
+eval_batch_size = 256
+learning_rate   = 0.0005
 clip            = 0
 epochs          = range(0, N_EPOCHS)
 
@@ -50,16 +57,19 @@ train_size = int(0.8 * len(dataset))
 val_size = len(dataset) - train_size
 train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size, val_size])
 
-trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
-valloader   = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
+trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=train_batch_size, shuffle=True, num_workers=4)
+valloader   = torch.utils.data.DataLoader(val_dataset, batch_size=eval_batch_size, shuffle=True, num_workers=4)
 
 
 # Create model
-model = RecoveryModel(INPUT_SIZE, hidden_size, batch_size, OUTPUT_SIZE, n_layers=n_layers)
+#model = RecoveryModel(INPUT_SIZE, hidden_size, OUTPUT_SIZE, n_layers=n_layers)
+model = LSTM_to_FFNN(INPUT_SIZE, hidden_size, OUTPUT_SIZE, dropout=dropout, n_layers=n_layers)
+model = model.to(device)
 
 # Define loss and optimizer
 criterion = nn.MSELoss(reduction="mean")
-optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+#optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
 
 
 #train= tqdm.tqdm(trainloader)
@@ -69,7 +79,8 @@ data = {"train": trainloader,
         "val": valloader}
 
 options = AttrDict({"optimizer": optimizer,
-                    "criterion": criterion})
+                    "criterion": criterion,
+                    "device": device})
 
 
 print("Starting the training loop...")
@@ -94,7 +105,7 @@ for epoch in epochs:
 
 
 # Save the model for later use
-torch.save(model.state_dict(), model_dir)
+torch.save(model, model_dir)
 
 
 
