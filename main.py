@@ -12,7 +12,7 @@ from RecoveryModel import RecoveryModel, RecoveryDataset, fit, validate, predict
 from datetime import datetime
 now = datetime.now()
 log_dir = "logs/" + now.strftime("%Y%m%d-%H%M%S") + "/"
-model_dir = "models/"
+model_dir = "models/" + now.strftime("%Y%m%d-%H%M%S") + ".pt"
 
 # torch.cuda.is_available() checks and returns a Boolean True if a GPU is available, else it'll return False
 cuda_available = torch.cuda.is_available()
