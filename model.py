@@ -97,6 +97,7 @@ class CNN1D(nn.Module):
         self.bn1    = nn.BatchNorm1d(64)
         self.conv2  = nn.Conv1d(64, 128, kernel_size)
         self.bn2    = nn.BatchNorm1d(128)
+        #self.conv3  = nn.Conv1d(128, 512, kernel_size)
 
         self.maxpool = nn.MaxPool1d(self.sequence_length)
         self.linear1 = nn.Linear(128, 64)

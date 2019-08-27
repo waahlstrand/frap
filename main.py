@@ -66,6 +66,7 @@ valloader   = torch.utils.data.DataLoader(val_dataset, batch_size=eval_batch_siz
 #model = RecoveryModel(INPUT_SIZE, hidden_size, OUTPUT_SIZE, n_layers=n_layers)
 #model = LSTM_to_FFNN(INPUT_SIZE, hidden_size, OUTPUT_SIZE, dropout=dropout, n_layers=n_layers)
 model = CNN1D(SEQUENCE_LENGTH, INPUT_SIZE, OUTPUT_SIZE)
+#model = FFNN()
 model = model.to(device)
 
 # Define loss and optimizer
