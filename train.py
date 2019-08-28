@@ -68,6 +68,7 @@ print("Training complete.")
 
 # Save model for inference, plotting, et c.
 # Inference is done by 
+# >> torch.load("model_path")
 # >> y = model(x)
 # x is a batch of data
 torch.save(trainer.model, saved_dir)
