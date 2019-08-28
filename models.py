@@ -153,7 +153,7 @@ class CNN1D(nn.Module):
         self.input_size         = input_size
         self.output_size        = output_size
 
-        kernel_size     = 1
+        kernel_size     = 2
         stride          = 1
 
         self.conv1  = nn.Conv1d(1, 64, kernel_size)

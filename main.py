@@ -6,15 +6,15 @@ import numpy as np
 from attrdict import AttrDict
 
 import time
-from RecoveryModel import RecoveryDataset, fit, validate, predict
-from model import LSTM_to_FFNN, CNN1D, FFNN, RecoveryModel
+from datasets import RecoveryDataset, fit, validate, predict
+from models import LSTM_to_FFNN, CNN1D, FFNN, RecoveryModel
 
 import os
 from datetime import datetime
 
 now = datetime.now()
-log_dir = "logs/" + now.strftime("%Y%m%d-%H%M%S") + "/"
-model_dir = "models/" + now.strftime("%Y%m%d-%H%M%S") + ".pt"
+log_dir = "logs/" + now.strftime("%Y%m%d-%H%M") + "/"
+model_dir = "saved/" + now.strftime("%Y%m%d-%H%M") + ".pt"
 
 # torch.cuda.is_available() checks and returns a Boolean True if a GPU is available, else it'll return False
 cuda_available = torch.cuda.is_available()
@@ -71,6 +71,7 @@ model = model.to(device)
 
 # Define loss and optimizer
 criterion = nn.MSELoss()
+
 optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
 #optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
 
