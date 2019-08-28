@@ -6,8 +6,8 @@ import numpy as np
 from attrdict import AttrDict
 
 import time
-from RecoveryModel import RecoveryModel, RecoveryDataset, fit, validate, predict
-from model import LSTM_to_FFNN, CNN1D, FFNN
+from RecoveryModel import RecoveryDataset, fit, validate, predict
+from model import LSTM_to_FFNN, CNN1D, FFNN, RecoveryModel
 
 import os
 from datetime import datetime
