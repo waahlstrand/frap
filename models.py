@@ -162,7 +162,7 @@ class CNN1D(nn.Module):
         self.bn2    = nn.BatchNorm1d(128)
         #self.conv3  = nn.Conv1d(128, 512, kernel_size)
 
-        self.maxpool = nn.MaxPool1d(self.sequence_length)
+        self.maxpool = nn.MaxPool1d(64)
         self.linear1 = nn.Linear(128, 64)
         self.linear2 = nn.Linear(64, 16)
         self.linear3 = nn.Linear(16, 3)
@@ -170,6 +170,7 @@ class CNN1D(nn.Module):
     def forward(self, x):
 
         batch_size = x.shape[0]
+
         # First convolutional layer 
         # (N x 1 x L) -> conv(1, 64)  
         x = F.relu(self.bn1(self.conv1(x.view(batch_size, 1, -1))))
