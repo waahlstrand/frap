@@ -100,6 +100,7 @@ class Trainer:
             training_result     = self._train_epoch(epoch)
             validation_result   = self._validate_epoch(epoch)
 
+            print('                                                      ')
 
             print('Epoch:  %d | Loss: %.4f | Validation: %.4f' % (epoch, 
                                                                     training_result["loss"], 
