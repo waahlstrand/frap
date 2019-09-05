@@ -160,7 +160,8 @@ class CNN1D(nn.Module):
         self.bn1    = nn.BatchNorm1d(64)
         self.conv2  = nn.Conv1d(64, 128, kernel_size)
         self.bn2    = nn.BatchNorm1d(128)
-        #self.conv3  = nn.Conv1d(128, 512, kernel_size)
+        self.conv3  = nn.Conv1d(128, 512, kernel_size)
+        self.bn3    = nn.BatchNorm1d(512)
 
         self.maxpool = nn.MaxPool1d(64)
         self.linear1 = nn.Linear(128, 64)
@@ -177,6 +178,9 @@ class CNN1D(nn.Module):
 
         # (N x 64 x L) -> conv(64, 128)
         x = F.relu(self.bn2(self.conv2(x)))
+
+        # (N x 64 x L) -> conv(128, 512)
+        #x = F.relu(self.bn3(self.conv3(x)))
 
         x = self.maxpool(x).view(-1, 128)
 

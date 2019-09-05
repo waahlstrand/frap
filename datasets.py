@@ -40,86 +40,61 @@ class RecoveryDataset(torch.utils.data.Dataset):
         return {"sample" :self.inputs[idx, :], "target":self.targets[idx, :]}
 
 
+class RecoveryTrainingDataset(torch.utils.data.Dataset):
 
+    def __init__(self, root_dir):
+        super(RecoveryTrainingDataset, self).__init__()
 
-def fit(model, data, options):
+        self.n_samples_train    = 2**16
+        self.n_samples_val      = 2**14
+        self.sequence_length    = 110
+        self.target_length      = 3
 
-    model.train()
-
-    train   = data["train"]
-
-    model.zero_grad()
-    running_loss = 0
-
-
-    for i, batch in enumerate(train):
-
-        X = batch["sample"].to(options.device)
-        y = batch["target"].to(options.device)
-
-        options.optimizer.zero_grad()
-
-        # Feed forward the data
-        prediction = model(X)
-
-        # Calculate the MSE loss
-        loss = options.criterion(prediction, y)
-
-        # Backpropagate the loss
-        loss.backward()
-
-        # Should we clip the gradient? 
-        # nn.utils.clip_grad_norm_(model.parameters(), clip)        
-        options.optimizer.step()
-
-        torch.nn.utils.clip_grad_norm_(model.parameters(), options.clip)
+        # Load all data
+        x_train = np.fromfile(root_dir + "/x_train.bin", dtype = np.float32)
+        y_train = np.fromfile(root_dir + "/y_train.bin", dtype = np.float32)
         
-        running_loss += loss.detach()
 
-    return running_loss/len(train.dataset)
+        # Concatenate all data 
+        x_train = np.reshape(x_train, (self.n_samples_train, self.sequence_length))
+        y_train = np.reshape(y_train, (self.n_samples_train, self.target_length))
 
+        self.inputs  = x_train
+        self.targets = y_train
 
-def validate(model, data, options):
-
-    # Set evaluation mode, equivalent but faster than model.eval()
-    model.eval()
-
-    model.zero_grad()
-
-    with torch.no_grad():
-
-        val = data["val"]
-
-        running_loss = 0
-
-        for i, batch in enumerate(val):
-
-            X = batch["sample"].to(options.device)
-            y = batch["target"].to(options.device)
-
-            # Feed forward the data
-            prediction = model(X)
-
-            # Calculate the MSE loss
-            loss = options.criterion(prediction, y)
+    def __len__(self):
             
-            running_loss += loss.detach()
+        return len(self.inputs[:,0])
 
-        return running_loss/len(val.dataset)
+    def __getitem__(self, idx):
 
-def predict(model, data):
+        return {"sample" :self.inputs[idx, :], "target":self.targets[idx, :]}
 
-    # Initialize evaluation mode
-    model.eval(True)
+class RecoveryValidationDataset(torch.utils.data.Dataset):
 
-    # Make single prediction from data
-    prediction = model(data)
+    def __init__(self, root_dir):
+        super(RecoveryValidationDataset, self).__init__()
 
-    model.eval(False)
+        self.n_samples_train    = 2**16
+        self.n_samples_val      = 2**14
+        self.sequence_length    = 110
+        self.target_length      = 3
 
-    return prediction
+        # Load all data
+        x_val   = np.fromfile(root_dir + "/x_val.bin", dtype = np.float32)
+        y_val   = np.fromfile(root_dir + "/y_val.bin", dtype = np.float32)
+        
 
+        x_val = np.reshape(x_val, (self.n_samples_val, self.sequence_length))
+        y_val = np.reshape(y_val, (self.n_samples_val, self.target_length))
 
-dataset = RecoveryDataset(root_dir = "rcs")
-dataloader = DataLoader(dataset, batch_size=4,
-                        shuffle=True, num_workers=4)
+        self.inputs  = x_val
+        self.targets = y_val
+
+    def __len__(self):
+            
+        return len(self.inputs[:,0])
+
+    def __getitem__(self, idx):
+
+        return {"sample" :self.inputs[idx, :], "target":self.targets[idx, :]}
