@@ -51,7 +51,8 @@ model = CNN1D(SEQUENCE_LENGTH, INPUT_SIZE, OUTPUT_SIZE)
 criterion = nn.MSELoss(reduction='none')
 
 # Define an optimizer
-optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.7, nesterov=True)
+#optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.1, amsgrad=False)
 
 # Preliminary storing configuration in dictionary, to be moved to json
 config = {"device": 1, # 0 means CPU, 1 the first GPU, 2 second GPU
