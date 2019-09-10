@@ -37,7 +37,7 @@ class RecoveryDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
 
-        return {"sample" :self.inputs[idx, :], "target":self.targets[idx, :]}
+        return self.inputs[idx, :], self.targets[idx, :]
 
 
 class RecoveryTrainingDataset(torch.utils.data.Dataset):
@@ -68,7 +68,7 @@ class RecoveryTrainingDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
 
-        return {"sample" :self.inputs[idx, :], "target":self.targets[idx, :]}
+        return self.inputs[idx, :], self.targets[idx, :]
 
 class RecoveryValidationDataset(torch.utils.data.Dataset):
 
@@ -97,4 +97,4 @@ class RecoveryValidationDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
 
-        return {"sample" :self.inputs[idx, :], "target":self.targets[idx, :]}
+        return self.inputs[idx, :], self.targets[idx, :]

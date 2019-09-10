@@ -39,12 +39,12 @@ learning_rate       = 0.0001
 epochs              = range(0, N_EPOCHS)
 
 # Get dataset of recovery curves
-dataset = RecoveryDataset("new_data")
-training = RecoveryTrainingDataset("new_data")
-validation = RecoveryValidationDataset("new_data")
+dataset = RecoveryDataset("rcs")
+training = RecoveryTrainingDataset("rcs")
+validation = RecoveryValidationDataset("rcs")
 
 # Load a model. CNN1D is completely hard-coded in its hyperparameters
-model = CNN1D(SEQUENCE_LENGTH, INPUT_SIZE, OUTPUT_SIZE)
+model = CNN1D(n_filters=64, n_hidden=64)
 
 # Define a loss function. reduction='none' signifies the loss for each element, not
 # averaged or summed

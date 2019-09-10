@@ -13,20 +13,20 @@ class Trainer:
         self.model      = model.to(self.device)
         self.dataset    = dataset
         self.validation = validation
-        self.criterion = criterion
-        self.optimizer = optimizer
+        self.criterion  = criterion
+        self.optimizer  = optimizer
+        self.loss       = 0
 
         settings = self.config["settings"]
-        logs     = self.config["logs"]
+        self.logs     = self.config["logs"]
 
         self.batch_size = settings["batch_size"]
         self.epochs = range(1, settings["epochs"]+1)
 
-        self.writer = SummaryWriter(logs["log_dir"])
-
         self.train_loader, self.val_loader = self._split_data(self.dataset, self.validation, settings["train_size"])
 
-
+        if self.logs:
+            self.writer = SummaryWriter(self.logs["log_dir"])
 
     def _train_epoch(self, epoch):
 
@@ -35,10 +35,10 @@ class Trainer:
         full_loss       = 0
         element_loss    = 0
 
-        for i, batch in enumerate(self.train_loader):
+        for i, (X, y) in enumerate(self.train_loader):
 
-            X = batch["sample"].to(self.device)
-            y = batch["target"].to(self.device)
+            X = X.to(self.device)
+            y = y.to(self.device)
 
             self.optimizer.zero_grad()
 
@@ -64,7 +64,6 @@ class Trainer:
         
         return result
 
-
     def _validate_epoch(self, epoch):
 
         self.model.eval()
@@ -72,10 +71,10 @@ class Trainer:
         full_loss       = 0
         element_loss    = 0
         with torch.no_grad():
-            for i, batch in enumerate(self.val_loader):
+            for i, (X, y) in enumerate(self.val_loader):
 
-                X = batch["sample"].to(self.device)
-                y = batch["target"].to(self.device)
+                X = X.to(self.device)
+                y = y.to(self.device)
 
                 self.optimizer.zero_grad()
 
@@ -99,7 +98,6 @@ class Trainer:
 
         return result
 
-
     def train(self):
 
         for epoch in self.epochs:
@@ -108,12 +106,13 @@ class Trainer:
             validation_result   = self._validate_epoch(epoch)
 
 
-            self.writer.add_scalars("Loss", {"training": training_result["loss"], 
-                                             "validation": validation_result["loss"]}, epoch)
+            if self.logs:
+                self.writer.add_scalars("Loss", {"training": training_result["loss"], 
+                                                 "validation": validation_result["loss"]}, epoch)
 
-            self.writer.add_scalars("Parameter loss", {"D": training_result["param"][0], 
-                                                       "C": training_result["param"][1], 
-                                                       "alpha": training_result["param"][2]}, epoch)
+                self.writer.add_scalars("Parameter loss", {"D": training_result["param"][0], 
+                                                           "C": training_result["param"][1], 
+                                                           "alpha": training_result["param"][2]}, epoch)
 
             ############### MANUAL PRINTING #####################
             print('                                                      ')
@@ -126,10 +125,10 @@ class Trainer:
                                                                     training_result["param"][1], 
                                                                     training_result["param"][2]))
             print('_____________________________________________________')
+
+        self.loss = validation_result["loss"] 
         
         self.writer.close()
-
-
 
     def _configure_device(self, device_id):
 
@@ -167,5 +166,6 @@ class Trainer:
 
 
         return train_loader, val_loader
+
 
 

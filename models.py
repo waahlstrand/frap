@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
+from utils import output_size_from_conv
 
 from torch.utils.data import Dataset, DataLoader
 
@@ -145,45 +146,85 @@ class LSTM_to_FFNN(nn.Module):
 
 class CNN1D(nn.Module):
 
-    def __init__(self, sequence_length, input_size, output_size):
+    def __init__(self, n_filters = 64, n_hidden = 16):
         
         super(CNN1D, self).__init__()
 
-        self.sequence_length    = sequence_length
-        self.input_size         = input_size
-        self.output_size        = output_size
+        #self.sequence_length    = sequence_length
+        self.input_size         = 1
+        self.output_size        = 3
+        self.sequence_length    = 110
+        self.n_filters          = n_filters
+        self.n_hidden           = n_hidden
+        self.n_maxpool          = 128
 
-        kernel_size     = 2
-        stride          = 1
+        self.kernel_size         = 2
+        self.maxpool_kernel_size = 3
+        self.stride              = 1
 
-        self.conv1  = nn.Conv1d(1, 64, kernel_size)
-        self.bn1    = nn.BatchNorm1d(64)
-        self.conv2  = nn.Conv1d(64, 128, kernel_size)
-        self.bn2    = nn.BatchNorm1d(128)
-        self.conv3  = nn.Conv1d(128, 512, kernel_size)
-        self.bn3    = nn.BatchNorm1d(512)
+        self.conv1  = nn.Conv1d(self.input_size, self.n_filters, self.kernel_size)
+        self.bn1    = nn.BatchNorm1d(self.n_filters)
 
-        self.maxpool = nn.MaxPool1d(64)
-        self.linear1 = nn.Linear(128, 64)
-        self.linear2 = nn.Linear(64, 16)
-        self.linear3 = nn.Linear(16, 3)
+        out = output_size_from_conv(self.sequence_length, self.kernel_size)
+
+        self.maxpool1 = nn.MaxPool1d(self.maxpool_kernel_size)
+
+        out_max = output_size_from_conv(out, self.maxpool_kernel_size, stride=self.maxpool_kernel_size)
+
+        self.conv2  = nn.Conv1d(self.n_filters, 2*self.n_filters, self.kernel_size)
+        self.bn2    = nn.BatchNorm1d(2*self.n_filters)
+
+        out = output_size_from_conv(out_max, self.kernel_size)
+
+        self.maxpool2 = nn.MaxPool1d(self.maxpool_kernel_size)
+
+        out_max = output_size_from_conv(out, self.maxpool_kernel_size, stride=self.maxpool_kernel_size)
+
+        #self.conv3  = nn.Conv1d(2*self.n_filters, 4*self.n_filters, self.kernel_size)
+        #self.bn3    = nn.BatchNorm1d(4*self.n_filters)
+
+        #out3 = output_size_from_conv(out_max1, self.kernel_size)
+
+        #self.maxpool3 = nn.MaxPool1d(self.maxpool_kernel_size)
+
+        #out_max3 = output_size_from_conv(out3, self.maxpool_kernel_size, stride=self.maxpool_kernel_size)
+        self.flatten = torch.flatten
+
+        self.linear1 = nn.Linear(2*self.n_filters*out_max, 4*self.n_hidden)
+        self.linear2 = nn.Linear(4*self.n_hidden, self.n_hidden)
+        self.linear3 = nn.Linear(self.n_hidden, self.output_size)
 
     def forward(self, x):
 
         batch_size = x.shape[0]
+        x = x.view(batch_size, 1, -1)
 
         # First convolutional layer 
         # (N x 1 x L) -> conv(1, 64)  
-        x = F.relu(self.bn1(self.conv1(x.view(batch_size, 1, -1))))
+        x = F.relu(self.bn1(self.conv1(x)))
+        #print(x.shape)
+
+        x = self.maxpool1(x)
+        #print(x.shape)
 
         # (N x 64 x L) -> conv(64, 128)
         x = F.relu(self.bn2(self.conv2(x)))
+        #print(x.shape)
+
+        x = self.maxpool2(x)
+        #print(x.shape)
 
         # (N x 64 x L) -> conv(128, 512)
         #x = F.relu(self.bn3(self.conv3(x)))
 
-        x = self.maxpool(x).view(-1, 128)
+        #x = self.maxpool(x).view(-1, self.n_maxpool)
+        #x = self.maxpool(x).squeeze()
+        #print(x.shape)
+        #print(x.view(-1, self.n_maxpool).shape)
 
+        # Flatten the data, except batch-dimension
+        x = self.flatten(x, start_dim=1, end_dim=2)
+        #print(x.shape)
         # Fully connected layer
         x = F.relu(self.linear1(x))
         x = F.relu(self.linear2(x))
