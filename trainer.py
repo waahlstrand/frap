@@ -9,8 +9,7 @@ class Trainer:
     def __init__(self, model, criterion, optimizer, config, dataset, validation):
         
         self.config     = config
-        self.device     = self._configure_device(self.config["device"])
-        self.model      = model.to(self.device)
+        self.model      = model
         self.dataset    = dataset
         self.validation = validation
         self.criterion  = criterion
@@ -19,6 +18,7 @@ class Trainer:
 
         settings = self.config["settings"]
         self.logs     = self.config["logs"]
+        self.verbose  = self.config["verbose"]
 
         self.batch_size = settings["batch_size"]
         self.epochs = range(1, settings["epochs"]+1)
@@ -100,6 +100,14 @@ class Trainer:
 
     def train(self):
 
+        self.device     = self._configure_device(self.config["device"])
+
+        # if torch.cuda.device_count() > 1:
+        #     print("Using", torch.cuda.device_count(), "GPUs")
+        #     self.model = nn.DataParallel(self.model)
+
+        self.model      = self.model.to(self.device)
+
         for epoch in self.epochs:
 
             training_result     = self._train_epoch(epoch)
@@ -115,20 +123,22 @@ class Trainer:
                                                            "alpha": training_result["param"][2]}, epoch)
 
             ############### MANUAL PRINTING #####################
-            print('                                                      ')
+            if self.verbose:
+                print('                                                      ')
 
-            print('Epoch:  %d | Loss: %.4f | Validation: %.4f' % (epoch, 
-                                                                    training_result["loss"], 
-                                                                    validation_result["loss"]))
+                print('Epoch:  %d | Loss: %.4f | Validation: %.4f' % (epoch, 
+                                                                        training_result["loss"], 
+                                                                        validation_result["loss"]))
 
-            print('MSE for   | D: %.4f | C: %.4f | alpha: %.4f' % (training_result["param"][0], 
-                                                                    training_result["param"][1], 
-                                                                    training_result["param"][2]))
-            print('_____________________________________________________')
+                print('MSE for   | D: %.4f | C: %.4f | alpha: %.4f' % (training_result["param"][0], 
+                                                                        training_result["param"][1], 
+                                                                        training_result["param"][2]))
+                print('_____________________________________________________')
 
         self.loss = validation_result["loss"] 
         
-        self.writer.close()
+        if self.logs:
+            self.writer.close()
 
     def _configure_device(self, device_id):
 

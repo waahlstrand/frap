@@ -34,7 +34,7 @@ TRAIN_FRACTION  = 0.8
 #n_layers            = 2
 #dropout             = 0.5
 batch_size          = 256
-learning_rate       = 0.0001
+learning_rate       = 0.001
 #clip                = 5
 epochs              = range(0, N_EPOCHS)
 
@@ -43,8 +43,7 @@ dataset = RecoveryDataset("rcs")
 training = RecoveryTrainingDataset("rcs")
 validation = RecoveryValidationDataset("rcs")
 
-# Load a model. CNN1D is completely hard-coded in its hyperparameters
-model = CNN1D(n_filters=64, n_hidden=64)
+model = CNN1D(n_filters=16, n_hidden=64)
 
 # Define a loss function. reduction='none' signifies the loss for each element, not
 # averaged or summed
@@ -56,6 +55,7 @@ optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.7, 
 
 # Preliminary storing configuration in dictionary, to be moved to json
 config = {"device": 1, # 0 means CPU, 1 the first GPU, 2 second GPU
+          "verbose": True,
           "settings": {"train_size": TRAIN_FRACTION,
                        "epochs": N_EPOCHS,
                        "batch_size": batch_size},

@@ -8,12 +8,13 @@ class Convolution1D(nn.Module):
 
     def __init__(self, in_channels, out_channels, sequence_length, conv_kernel, maxpool_kernel, stride=1, padding=0, dilation=1, groups=1, bias=True):
 
-        super().__init__(Convolution1D)
+        super(Convolution1D, self).__init__()
         self.in_channels    = in_channels
         self.out_channels   = out_channels
         self.conv_kernel    = conv_kernel
         self.maxpool_kernel = maxpool_kernel
         self.length         = sequence_length
+
         self.stride         = stride
         self.padding        = padding
         self.dilation       = dilation
@@ -40,6 +41,8 @@ class Convolution1D(nn.Module):
         self.maxpool_size   = output_size_from_conv(self.conv_size, 
                                                     self.maxpool_kernel, 
                                                     stride=self.maxpool_kernel)
+
+        self.output_size    = self.out_channels*self.maxpool_size
 
     def forward(self, x):
 
