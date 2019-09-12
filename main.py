@@ -23,7 +23,7 @@ if __name__ == '__main__':
     config = utils.Params(config_path)
 
     # Set manual random seed
-    if config.cuda: 
+    if config.cuda: # If cuda
         torch.cuda.manual_seed(222)
     else:
         torch.manual_seed(2222)
