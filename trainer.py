@@ -130,7 +130,7 @@ class Trainer:
                 self.writer.add_scalars("Loss", {"training": training_result["loss"], 
                                                  "validation": validation_result["loss"]}, epoch)
 
-                self.writer.add_scalars("Parameter loss", {"D": validation_result["param"][0], 
+                self.writer.add_scalars("Parameter-wise", {"D": validation_result["param"][0], 
                                                            "C": validation_result["param"][1], 
                                                            "α": validation_result["param"][2]}, epoch)
 
