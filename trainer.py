@@ -2,13 +2,14 @@ import torch
 import torch.nn as nn
 import numpy as np
 import logging
+import os
 import utils
 from torch.utils.data import Dataset, DataLoader
-#from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 
 class Trainer:
 
-    def __init__(self, model, config, criterion, optimizer, dataset, validation, verbose):
+    def __init__(self, model, config, criterion, optimizer, dataset, validation, model_dir):
 
         self.config     = config
         self.model      = model
@@ -18,10 +19,10 @@ class Trainer:
         self.optimizer  = optimizer
         self.loss       = 0
 
-        #self.logging    = utils.str_to_bool(self.config.logging)
+        self.tensorboard = utils.str_to_bool(self.config.tensorboard)
 
         self.cuda       = utils.str_to_bool(self.config.cuda)
-        self.verbose    = verbose
+        self.verbose    = utils.str_to_bool(self.config.verbose)
 
         self.batch_size = self.config.params.batch_size
         self.n_epochs   = self.config.params.n_epochs
@@ -32,9 +33,12 @@ class Trainer:
 
         self.train_loader, self.val_loader = self._split_data(self.dataset, self.validation, self.train_fraction)
 
-        # if self.logging:
+        if self.tensorboard:
+            tensorboard_dir = os.path.join(model_dir, "logs/")
+            if not os.path.exists(tensorboard_dir):
+                os.makedirs(tensorboard_dir)
 
-        #     self.writer = SummaryWriter("tb_logs/")
+            self.writer = SummaryWriter(tensorboard_dir)
 
     def _train_epoch(self, epoch):
 
@@ -122,13 +126,13 @@ class Trainer:
             validation_result   = self._validate_epoch(epoch)
 
 
-            # if self.logs:
-            #     self.writer.add_scalars("Loss", {"training": training_result["loss"], 
-            #                                      "validation": validation_result["loss"]}, epoch)
+            if self.tensorboard:
+                self.writer.add_scalars("Loss", {"training": training_result["loss"], 
+                                                 "validation": validation_result["loss"]}, epoch)
 
-            #     self.writer.add_scalars("Parameter loss", {"D": training_result["param"][0], 
-            #                                                "C": training_result["param"][1], 
-            #                                                "alpha": training_result["param"][2]}, epoch)
+                self.writer.add_scalars("Parameter loss", {"D": validation_result["param"][0], 
+                                                           "C": validation_result["param"][1], 
+                                                           "α": validation_result["param"][2]}, epoch)
 
             ############### MANUAL PRINTING #####################
             if self.verbose:
@@ -138,15 +142,15 @@ class Trainer:
                                                                         training_result["loss"], 
                                                                         validation_result["loss"]))
 
-                logging.info('MSE for   | D: %.4f | C: %.4f | alpha: %.4f' % (training_result["param"][0], 
-                                                                        training_result["param"][1], 
-                                                                        training_result["param"][2]))
+                logging.info('MSE for   | D: %.4f | C: %.4f | α: %.4f' % (validation_result["param"][0], 
+                                                                        validation_result["param"][1], 
+                                                                        validation_result["param"][2]))
                 logging.info('_____________________________________________________')
 
         self.loss = validation_result["loss"] 
         
-        # if self.logs:
-        #     self.writer.close()
+        if self.tensorboard:
+            self.writer.close()
 
 
 

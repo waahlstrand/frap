@@ -13,11 +13,11 @@ parser = argparse.ArgumentParser()
 
 #parser.add_argument("--data_path", default='data', help='Path to the data.')
 parser.add_argument('--config_name', default='config.json', help="Name of .json file")
-parser.add_argument('--job_name', default='training', help="Name of job file.")
-parser.add_argument("--verbose", default = 'True', help="Print log to terminal.")
+#parser.add_argument('--job_name', default='training', help="Name of job file.")
+#parser.add_argument("--verbose", default = 'True', help="Print log to terminal.")
 
 
-def train(config, model_dir, verbose):
+def train(config, model_dir):
     # Record time
     now = datetime.now()
 
@@ -37,7 +37,6 @@ def train(config, model_dir, verbose):
     n_filters   = params.n_filters
     n_hidden    = params.n_hidden
 
-    logs        = utils.str_to_bool(config.logging)
     use_val     = utils.str_to_bool(config.validation)
 
     ############### INITIALISE MODEL ######################
@@ -58,7 +57,7 @@ def train(config, model_dir, verbose):
 
     # Initialize a Regressor training object
     logging.info("Initializing trainer object...")    
-    trainer = Trainer(model, config, criterion, optimizer, training, validation, verbose)
+    trainer = Trainer(model, config, criterion, optimizer, training, validation, model_dir)
     logging.info("- Initialization complete.")
 
     ################ TRAIN THE MODEL ######################
@@ -75,23 +74,21 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     config_name = args.config_name
-    job_name    = args.job_name
-    verbose     = utils.str_to_bool(args.verbose)
+    config_path = os.path.join("config/", config_name)
 
+    # Extract parameters
+    config = utils.Configuration.from_nested_dict(config_path)
+    
+    job_name    = config.job_name
     model_dir = os.path.join("saved/", job_name)
 
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
 
-    config_path = os.path.join("config/", config_name)
-
-    # Extract parameters
-    config = utils.Configuration.from_nested_dict(config_path)
-
     # Initialize logger
     utils.set_logger(os.path.join(model_dir, 'train.log'))
     
     ########## START TRAINING ###########
-    train(config, model_dir, verbose)
+    train(config, model_dir)
 
 
