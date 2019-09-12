@@ -6,68 +6,13 @@ from utils import output_size_from_conv
 from layers import Convolution1D
 from torch.utils.data import Dataset, DataLoader
 
-class RecoveryModel(nn.Module):
+class ResNet1D(nn.Module):
 
-    def __init__(self, input_size, hidden_size, output_size, n_layers = 2):
-        """A simple LSTM for training on FRAP recovery curves, taking 1D data. Uses 
-        custom number of layers for deeper training to perform regression on three parameters.
+    def __init__(self):
+
+        super(ResNet1D, self).__init__()
+
         
-        Arguments:
-            input_size {int} -- The input dimension of the data (recovery curves: 1)
-            hidden_size {int} -- Number of hidden units in the data
-            batch_size {int} -- Number of sequences to process
-            output_size {int} -- The dimension of the output from regression
-            n_layers {int} -- Number of hidden LSTM layers in the RNN
-        """
-        
-        super(RecoveryModel, self).__init__()
-
-        # Model attributes
-        self.input_size     = input_size
-        self.hidden_size    = hidden_size
-        #self.batch_size     = batch_size
-        self.output_size    = output_size
-
-        self.n_layers       = n_layers
-
-        # Define model components
-        self.LSTM   = nn.LSTM(self.input_size, self.hidden_size, self.n_layers)
-        self.linear = nn.Linear(self.hidden_size, self.output_size)
-
-    def initialize_hidden_state(self, batch_size):
-        """Initializes the hidden state of an LSTM at t = 0 as zero. Hidden size
-        is (number of layers, batch size, hidden size).
-        
-        Returns:
-            (torch.Tensor, torch.Tensor) -- A tuple of zero tensors of dimension (number of layers, batch size, hidden size)
-        """
-        device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-
-        (h, c) = (torch.zeros(self.n_layers, batch_size, self.hidden_size).to(device), torch.zeros(self.n_layers, batch_size, self.hidden_size).to(device))
-
-        return (h, c)
-
-    def forward(self, x):
-        """The recurrent feedforward propagation of the network.
-        
-        Arguments:
-            x {torch.Tensor} -- The recovery curve batch with dimensions (sequence length, batch, input size)
-        
-        Returns:
-            torch.Tensor -- Recovery curve parameter estimate with dimensions (output size)
-        """
-        batch_size = x.shape[0]
-
-        # Initialize the hidden state for timestep zero
-        hidden = self.initialize_hidden_state(batch_size)
-
-        # Assert that x has dim (sequence length, batch size, input size)
-        output, hidden = self.LSTM(x.view(-1, batch_size, self.input_size), hidden)
-
-        y = self.linear(output[-1])
-
-        return y
-
 
 class LSTM_to_FFNN(nn.Module):
 
@@ -143,7 +88,6 @@ class LSTM_to_FFNN(nn.Module):
 
         return y
 
-
 class CNN1D(nn.Module):
 
     def __init__(self, n_filters = 64, n_hidden = 16):
@@ -203,7 +147,6 @@ class CNN1D(nn.Module):
 
         return y
 
-
 class FFNN(nn.Module):
     
     def __init__(self):
@@ -228,3 +171,34 @@ class FFNN(nn.Module):
 
         return y
 
+class CNN3D(nn.Module):
+
+    def __init__(self, n_filters, n_hidden):
+
+        super(CNN3D, self).__init__()
+
+        self.in_channels        = 1
+        self.out_channels       = n_filters
+        self.width              = 256
+        self.height             = self.width
+        self.depth              = 100
+
+        self.n_hidden           = n_hidden
+
+        self.kernel_size         = 2
+        self.maxpool_kernel_size = 3
+        self.stride              = 1
+
+        self.conv = nn.Conv3d(self.in_channels, self.out_channels, self.kernel_size, stride=self.stride)
+
+    def forward(self, x):
+        """An implementation of the torch.nn forward operation.
+        
+        Arguments:
+            x {torch.Tensor} -- A tensor of shape (N, C_in, D, H, W), where N is the batch size, C_in the number of
+            in channels, D, H, W is depth, height, width respectively. This is equivalent to N video sequences of length D
+            with C_in channels.
+        """
+        x = self.conv(x)
+
+        return x
