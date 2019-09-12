@@ -39,9 +39,9 @@ learning_rate       = 0.001
 epochs              = range(0, N_EPOCHS)
 
 # Get dataset of recovery curves
-dataset = RecoveryDataset("rcs")
-training = RecoveryTrainingDataset("rcs")
-validation = RecoveryValidationDataset("rcs")
+dataset = RecoveryDataset("new_data")
+training = RecoveryTrainingDataset("new_data")
+validation = RecoveryValidationDataset("new_data")
 
 model = CNN1D(n_filters=16, n_hidden=64)
 

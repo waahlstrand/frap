@@ -42,7 +42,6 @@ class Convolution1D(nn.Module):
                                                     self.maxpool_kernel, 
                                                     stride=self.maxpool_kernel)
 
-        self.output_size    = self.out_channels*self.maxpool_size
 
     def forward(self, x):
 
@@ -51,3 +50,7 @@ class Convolution1D(nn.Module):
         x = self.maxpool1(x)
 
         return x
+
+    def output_size(self):
+
+        return self.out_channels*self.maxpool_size
