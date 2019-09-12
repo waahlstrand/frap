@@ -121,7 +121,7 @@ class CNN1D(nn.Module):
 
         self.flatten = torch.flatten
 
-        self.linear1 = nn.Linear(self.conv1.output_size(), 4*self.n_hidden)
+        self.linear1 = nn.Linear(self.conv2.output_size(), 4*self.n_hidden)
         self.linear2 = nn.Linear(4*self.n_hidden, self.n_hidden)
         self.linear3 = nn.Linear(self.n_hidden, self.output_size)
 
@@ -135,7 +135,7 @@ class CNN1D(nn.Module):
         x = self.conv1(x)
 
         # Second convolutional layer
-        #x = self.conv2(x)
+        x = self.conv2(x)
 
         # Flatten the data, except batch-dimension
         x = self.flatten(x, start_dim=1, end_dim=2)
