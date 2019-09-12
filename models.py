@@ -177,7 +177,7 @@ class CNN1D(nn.Module):
 
         self.flatten = torch.flatten
 
-        self.linear1 = nn.Linear(self.conv1.output_size, 4*self.n_hidden)
+        self.linear1 = nn.Linear(self.conv1.output_size(), 4*self.n_hidden)
         self.linear2 = nn.Linear(4*self.n_hidden, self.n_hidden)
         self.linear3 = nn.Linear(self.n_hidden, self.output_size)
 
