@@ -1,13 +1,15 @@
 import torch
 import torch.nn as nn
 import numpy as np
+import logging
+import utils
 from torch.utils.data import Dataset, DataLoader
-from torch.utils.tensorboard import SummaryWriter
+#from torch.utils.tensorboard import SummaryWriter
 
 class Trainer:
 
-    def __init__(self, model, criterion, optimizer, config, dataset, validation):
-        
+    def __init__(self, model, config, criterion, optimizer, dataset, validation, verbose):
+
         self.config     = config
         self.model      = model
         self.dataset    = dataset
@@ -16,17 +18,23 @@ class Trainer:
         self.optimizer  = optimizer
         self.loss       = 0
 
-        settings = self.config["settings"]
-        self.logs     = self.config["logs"]
-        self.verbose  = self.config["verbose"]
+        #self.logging    = utils.str_to_bool(self.config.logging)
 
-        self.batch_size = settings["batch_size"]
-        self.epochs = range(1, settings["epochs"]+1)
+        self.cuda       = utils.str_to_bool(self.config.cuda)
+        self.verbose    = verbose
 
-        self.train_loader, self.val_loader = self._split_data(self.dataset, self.validation, settings["train_size"])
+        self.batch_size = self.config.params.batch_size
+        self.n_epochs   = self.config.params.n_epochs
+        self.train_fraction = config.params.train_fraction
 
-        if self.logs:
-            self.writer = SummaryWriter(self.logs["log_dir"])
+
+        self.epochs = range(1, self.n_epochs+1)
+
+        self.train_loader, self.val_loader = self._split_data(self.dataset, self.validation, self.train_fraction)
+
+        # if self.logging:
+
+        #     self.writer = SummaryWriter("tb_logs/")
 
     def _train_epoch(self, epoch):
 
@@ -100,13 +108,13 @@ class Trainer:
 
     def train(self):
 
-        self.device     = self._configure_device(self.config["device"])
+        self.device = self._configure_device(self.cuda)
 
         # if torch.cuda.device_count() > 1:
         #     print("Using", torch.cuda.device_count(), "GPUs")
         #     self.model = nn.DataParallel(self.model)
 
-        self.model      = self.model.to(self.device)
+        self.model  = self.model.to(self.device)
 
         for epoch in self.epochs:
 
@@ -114,33 +122,35 @@ class Trainer:
             validation_result   = self._validate_epoch(epoch)
 
 
-            if self.logs:
-                self.writer.add_scalars("Loss", {"training": training_result["loss"], 
-                                                 "validation": validation_result["loss"]}, epoch)
+            # if self.logs:
+            #     self.writer.add_scalars("Loss", {"training": training_result["loss"], 
+            #                                      "validation": validation_result["loss"]}, epoch)
 
-                self.writer.add_scalars("Parameter loss", {"D": training_result["param"][0], 
-                                                           "C": training_result["param"][1], 
-                                                           "alpha": training_result["param"][2]}, epoch)
+            #     self.writer.add_scalars("Parameter loss", {"D": training_result["param"][0], 
+            #                                                "C": training_result["param"][1], 
+            #                                                "alpha": training_result["param"][2]}, epoch)
 
             ############### MANUAL PRINTING #####################
             if self.verbose:
-                print('                                                      ')
+                logging.info('                                                      ')
 
-                print('Epoch:  %d | Loss: %.4f | Validation: %.4f' % (epoch, 
+                logging.info('Epoch:  %d | Loss: %.4f | Validation: %.4f' % (epoch, 
                                                                         training_result["loss"], 
                                                                         validation_result["loss"]))
 
-                print('MSE for   | D: %.4f | C: %.4f | alpha: %.4f' % (training_result["param"][0], 
+                logging.info('MSE for   | D: %.4f | C: %.4f | alpha: %.4f' % (training_result["param"][0], 
                                                                         training_result["param"][1], 
                                                                         training_result["param"][2]))
-                print('_____________________________________________________')
+                logging.info('_____________________________________________________')
 
         self.loss = validation_result["loss"] 
         
-        if self.logs:
-            self.writer.close()
+        # if self.logs:
+        #     self.writer.close()
 
-    def _configure_device(self, device_id):
+
+
+    def _configure_device(self, cuda):
 
         cuda_available = torch.cuda.is_available()
 
@@ -149,14 +159,13 @@ class Trainer:
 
         # If we have a GPU available, we'll set our device to GPU. 
         # We'll use this device variable later in our code.
-        if cuda_available and device_id > 0:
-            n_gpu = torch.cuda.device_count()
+        if cuda_available and cuda:
             
-            print("GPU is available. Using GPU.")
-            device = torch.device("cuda:"+str(device_id-1))
+            logging.info("GPU is available. Using GPU.")
+            device = torch.device("cuda:0")
 
         else:
-            print("GPU not available. Using CPU.")
+            logging.info("GPU not available. Using CPU.")
             device = torch.device("cpu")
 
         return device

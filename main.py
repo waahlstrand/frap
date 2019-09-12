@@ -1,167 +1,97 @@
+import argparse
+import os
 import torch
 import torch.nn as nn
-from torch.utils.tensorboard import SummaryWriter
-
-import numpy as np
-from attrdict import AttrDict
-
-import time
-from datasets import RecoveryDataset, fit, validate, predict
-from models import LSTM_to_FFNN, CNN1D, FFNN, RecoveryModel
-
-import os
+import utils
 from datetime import datetime
+import logging
 
-now = datetime.now()
-log_dir = "logs/" + now.strftime("%Y%m%d-%H%M") + "/"
-model_dir = "saved/" + now.strftime("%Y%m%d-%H%M") + ".pt"
+from models import CNN1D
+from trainer import Trainer
 
-# torch.cuda.is_available() checks and returns a Boolean True if a GPU is available, else it'll return False
-cuda_available = torch.cuda.is_available()
+parser = argparse.ArgumentParser()
 
-os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152
-os.environ["CUDA_VISIBLE_DEVICES"]="1"
-
-# If we have a GPU available, we'll set our device to GPU. We'll use this device variable later in our code.
-if cuda_available:
-    device = torch.device("cuda")
-    print("GPU is available.")
-else:
-    device = torch.device("cpu")
-    print("GPU not available, using CPU.")
-
-# Tensorboard
-writer = SummaryWriter(log_dir)
+#parser.add_argument("--data_path", default='data', help='Path to the data.')
+parser.add_argument('--config_name', default='config.json', help="Name of .json file")
+parser.add_argument('--job_name', default='training', help="Name of job file.")
+parser.add_argument("--verbose", default = 'True', help="Print log to terminal.")
 
 
-# Define constants
-INPUT_SIZE  = 1
-OUTPUT_SIZE = 3
-N_EPOCHS    = 200
-SEQUENCE_LENGTH = 110
+def train(config, model_dir, verbose):
+    # Record time
+    now = datetime.now()
+
+    # Set seed
+    if config.cuda: 
+        torch.cuda.manual_seed(2222)
+    else:
+        torch.manual_seed(2222)
+
+    params      = config.params
+    data_path   = config.data_path
+    mode        = config.mode
+
+    n_epochs    = params.n_epochs
+    lr          = params.lr
+    momentum    = params.momentum
+    n_filters   = params.n_filters
+    n_hidden    = params.n_hidden
+
+    logs        = utils.str_to_bool(config.logging)
+    use_val     = utils.str_to_bool(config.validation)
+
+    ############### INITIALISE MODEL ######################
+    model = CNN1D(n_filters=n_filters, n_hidden=n_hidden)
+
+    # Define a loss function. reduction='none' is elementwise loss, later summed manually
+    criterion = nn.MSELoss(reduction='none')
+
+    # Define an optimizer
+    optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum, nesterov=True)
+
+    ############## GET DATALOADERS ########################
+    # Get dataset of recovery curves
+    #dataset = RecoveryDataset(data_path)
+    logging.info("Loading the datasets...")
+    training, validation = utils.get_dataloaders(mode, data_path, use_val)
+    logging.info("- Loading complete.")
+
+    # Initialize a Regressor training object
+    logging.info("Initializing trainer object...")    
+    trainer = Trainer(model, config, criterion, optimizer, training, validation, verbose)
+    logging.info("- Initialization complete.")
+
+    ################ TRAIN THE MODEL ######################
+    logging.info("Starting training for {} epoch(s)".format(n_epochs))
+    trainer.train()
+    logging.info("Training complete.")
+
+    torch.save(trainer.model, os.path.join(model_dir, now.strftime("%Y%m%d-%H%M") + ".pt"))
 
 
-# Define hyperparameters
-hidden_size     = 64
-n_layers        = 2
-dropout         = 0.5
-train_batch_size  = 256
-eval_batch_size = 256
-learning_rate   = 0.0005
-clip            = 5
-epochs          = range(0, N_EPOCHS)
+if __name__ == '__main__':
 
-# Get dataset of recovery curves
-dataset = RecoveryDataset("rcs")
+    # Parse arguments to program
+    args = parser.parse_args()
 
-train_size = int(0.8 * len(dataset))
-val_size = len(dataset) - train_size
-train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size, val_size])
+    config_name = args.config_name
+    job_name    = args.job_name
+    verbose     = utils.str_to_bool(args.verbose)
 
-trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=train_batch_size, shuffle=True, num_workers=4)
-valloader   = torch.utils.data.DataLoader(val_dataset, batch_size=eval_batch_size, shuffle=True, num_workers=4)
+    model_dir = os.path.join("saved/", job_name)
 
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
 
-# Create model
-#model = RecoveryModel(INPUT_SIZE, hidden_size, OUTPUT_SIZE, n_layers=n_layers)
-#model = LSTM_to_FFNN(INPUT_SIZE, hidden_size, OUTPUT_SIZE, dropout=dropout, n_layers=n_layers)
-model = CNN1D(SEQUENCE_LENGTH, INPUT_SIZE, OUTPUT_SIZE)
-#model = FFNN()
-model = model.to(device)
+    config_path = os.path.join("config/", config_name)
 
-# Define loss and optimizer
-criterion = nn.MSELoss()
+    # Extract parameters
+    config = utils.Configuration.from_nested_dict(config_path)
 
-optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
-#optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
-
-
-#train= tqdm.tqdm(trainloader)
-train = trainloader
-
-data = {"train": trainloader,
-        "val": valloader}
-
-options = AttrDict({"optimizer": optimizer,
-                    "criterion": criterion,
-                    "clip": clip,
-                    "device": device})
-
-
-print("Starting the training loop...")
-
-for epoch in epochs:
-
-    epoch_time = time.time()
-
-    ######## TRAIN THE MODEL ########
-    loss = fit(model, data, options = options)
-
-    ######## VALIDATE MODEL #########
-    validation_loss = validate(model, data, options = options)
-
-    # Print the data to Tensorboard
-    timing = time.time()-epoch_time
-    writer.add_scalars(now.strftime("%Y%m%d-%H%M%S"), {"training": loss,
-                                                       "validation": validation_loss}, epoch)
-    #writer.add_scalar("Time/train", timing, epoch)
+    # Initialize logger
+    utils.set_logger(os.path.join(model_dir, 'train.log'))
     
-    print('Epoch:  %d | Loss: %.4f | Validation: %.4f | Time: %.4f' % (epoch, loss, validation_loss, timing))
+    ########## START TRAINING ###########
+    train(config, model_dir, verbose)
 
 
-# Save the model for later use
-torch.save(model, model_dir)
-
-
-
-
-
-# for epoch in epochs:
-#     start_time = time.time()
-
-#     # Zero grad with the model
-#     model.zero_grad()
-
-#     running_loss = 0
-
-#     for i, batch in enumerate(train):
-
-#         ########### TRAINING #############
-#         X = batch[0]
-#         target = batch[1]
-
-#         # Zero the gradient from previous computation
-#         optimizer.zero_grad()
-
-#         # Feed forward
-#         y = model(X)
-
-#         # Evaluate loss
-#         loss = criterion(y, target)
-
-#         # Backpropagate
-#         loss.backward()
-
-#         # Should we clip the gradient? 
-#         # nn.utils.clip_grad_norm_(model.parameters(), clip)        
-#         optimizer.step()
-        
-#         running_loss += loss.detach().item()
-
-#         ############ VALIDATION #############
-#         with torch.no_grad():
-#             pass
-
-#     timing = time.time()-start_time
-
-#     writer.add_scalar("Loss/train", running_loss, epoch)
-#     writer.add_scalar("Time/train", timing, epoch)
-    
-#     print('Epoch:  %d | Loss: %.4f | Time: %.4f' % (epoch, running_loss, timing))
-
-
-writer.close()
-
-
-
-        
