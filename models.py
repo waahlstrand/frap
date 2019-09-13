@@ -4,15 +4,8 @@ import numpy as np
 import torch.nn.functional as F
 from utils import output_size_from_conv
 from layers import Convolution1D
-from torch.utils.data import Dataset, DataLoader
+#from torch.utils.data import Dataset, DataLoader
 
-class ResNet1D(nn.Module):
-
-    def __init__(self):
-
-        super(ResNet1D, self).__init__()
-
-        
 
 class LSTM_to_FFNN(nn.Module):
 

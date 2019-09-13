@@ -1,12 +1,8 @@
-from models import CNN3D
+from models import CNN1D
+from torchsummary import summary
 import torch
+from resnet import resnet18
 
-x = torch.randn(50, 1, 100, 256, 256)
+X = torch.rand(256, 1, 100)
 
-n_filters = 2
-n_hidden  = 16
-
-model = CNN3D(n_filters, n_hidden)
-
-print(model(x).shape)
-
+model = resnet18(in_channels=1, dimension=1)

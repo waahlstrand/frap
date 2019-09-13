@@ -1,6 +1,7 @@
 {
-    "job_name": "cnn1d",
-    "model_name": "cnn1d",
+    "job_name": "resnet",
+    "model_name": "resnet1d",
+
     "params": {
 
         "n_epochs" : 10000,

@@ -6,7 +6,7 @@ import numpy as np
 
 import time
 from trainer import Trainer
-from datasets import RecoveryDataset, RecoveryTrainingDataset, RecoveryValidationDataset
+from data.datasets import RecoveryDataset, RecoveryTrainingDataset, RecoveryValidationDataset
 from models import LSTM_to_FFNN, CNN1D, FFNN
 
 import os

@@ -1,7 +1,7 @@
 import numpy as np
 import json
 import logging
-from datasets import RecoveryDataset, RecoveryTrainingDataset, RecoveryValidationDataset
+from data.datasets import RecoveryDataset, RecoveryTrainingDataset, RecoveryValidationDataset
 
 class Configuration(dict):
     """ Dictionary subclass whose entries can be accessed by attributes

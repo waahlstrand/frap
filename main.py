@@ -7,6 +7,7 @@ from datetime import datetime
 import logging
 
 from models import CNN1D
+from resnet import resnet18
 from trainer import Trainer
 
 parser = argparse.ArgumentParser()
@@ -30,6 +31,7 @@ def train(config, model_dir):
     params      = config.params
     data_path   = config.data_path
     mode        = config.mode
+    model_name  = config.model_name
 
     n_epochs    = params.n_epochs
     lr          = params.lr
@@ -40,7 +42,10 @@ def train(config, model_dir):
     use_val     = utils.str_to_bool(config.validation)
 
     ############### INITIALISE MODEL ######################
-    model = CNN1D(n_filters=n_filters, n_hidden=n_hidden)
+    if model_name == "cnn1d":
+        model = CNN1D(n_filters=n_filters, n_hidden=n_hidden)
+    elif model_name == "resnet1d":
+        model = resnet18(in_channels=1, dimension=1, num_classes=3)
 
     # Define a loss function. reduction='none' is elementwise loss, later summed manually
     criterion = nn.MSELoss(reduction='none')
