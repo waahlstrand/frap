@@ -10,14 +10,14 @@
         "n_filters": 16,
         "n_hidden": 64,
         "train_fraction": 0.8,
-        "batch_size": 256
+        "batch_size": 128
 
     },
     "verbose": "True",
     "cuda": "True",
     "mode": "rcs",
     "tensorboard": "True",
-    "data_path": "rcs",
+    "data_path": "new_data",
     "validation": "True"
     
 }

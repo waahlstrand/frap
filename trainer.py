@@ -152,8 +152,6 @@ class Trainer:
         if self.tensorboard:
             self.writer.close()
 
-
-
     def _configure_device(self, cuda):
 
         cuda_available = torch.cuda.is_available()

@@ -54,6 +54,8 @@ class BasicBlock(nn.Module):
         self.stride = stride
 
     def forward(self, x):
+
+
         identity = x
 
         out = self.conv1(x)
@@ -129,7 +131,7 @@ class ResNet(nn.Module):
             elif dimension == 3:
                 norm_layer = nn.BatchNorm3d
         self._norm_layer = norm_layer
-
+        self.output_size = num_classes
         self.inplanes = 64
         self.dilation = 1
         if replace_stride_with_dilation is None:
@@ -226,6 +228,10 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
+
+        batch_size = x.shape[0]
+        x = x.view(batch_size, 1, -1)
+
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
