@@ -1,12 +1,16 @@
-"""A small test for Bayesian optimization, using hyperopt
-"""
-
-from hyperopt import hp, fmin, tpe, STATUS_OK, STATUS_FAIL
 import numpy as np
+import os
 
-space = {"n_hidden" : hp.randint('n_hidden', 16, 64),
-         "lr": hp.loguniform("lr", 0.1, 0.001)}
+X = np.fromfile("/home/sms/magnusro/frap_ann/generate_clean_data/x_1.bin", dtype = np.float32)
+y = np.fromfile("/home/sms/magnusro/frap_ann/generate_clean_data/y_1.bin", dtype = np.float32)
 
-def tune(space):
+shape      = (1, 110, 256, 256)
+n_params   = 3
+        
+X = np.reshape(X, (-1, *shape))
+y = np.reshape(y, (-1, n_params))
+os.mkdir("data/spatiotemporal")
 
-    
+for i in range(X.shape[0]):
+    np.save(os.path.join("data/spatiotemporal", "x_"+str(i+1)), X[i, :, :, :, :])
+    np.save(os.path.join("data/spatiotemporal", "y_"+str(i+1)), y[i, :])
