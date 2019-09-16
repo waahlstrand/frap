@@ -164,7 +164,7 @@ class Trainer:
         if cuda_available and cuda:
             
             logging.info("GPU is available. Using GPU.")
-            device = torch.device("cuda:0")
+            device = torch.device("cuda:1")
 
         else:
             logging.info("GPU not available. Using CPU.")

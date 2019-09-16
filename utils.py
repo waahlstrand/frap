@@ -1,7 +1,7 @@
 import numpy as np
 import json
 import logging
-from data.datasets import RecoveryDataset, RecoveryTrainingDataset, RecoveryValidationDataset
+from data.datasets import *
 
 class Configuration(dict):
     """ Dictionary subclass whose entries can be accessed by attributes
@@ -78,3 +78,9 @@ def get_dataloaders(mode, data_path, validation):
             train = RecoveryTrainingDataset(data_path)
 
             return train, None
+    
+    elif mode == "spatiotemporal":
+        
+        train = SpatiotemporalDataset()
+
+        return train, None

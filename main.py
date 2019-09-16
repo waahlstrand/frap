@@ -6,8 +6,9 @@ import utils
 from datetime import datetime
 import logging
 
-from models import CNN1D
-from resnet import resnet18
+from models.onedee import CNN1D
+from models import voxnet as vx
+from models import resnet as rs
 from trainer import Trainer
 
 parser = argparse.ArgumentParser()
@@ -38,6 +39,7 @@ def train(config, model_dir):
     momentum    = params.momentum
     n_filters   = params.n_filters
     n_hidden    = params.n_hidden
+    batch_size  = params.batch_size
 
     use_val     = utils.str_to_bool(config.validation)
 
@@ -46,6 +48,8 @@ def train(config, model_dir):
         model = CNN1D(n_filters=n_filters, n_hidden=n_hidden)
     elif model_name == "resnet1d":
         model = resnet18(in_channels=1, dimension=1, num_classes=3)
+    elif model_name == "voxnet":
+        model = vx.VoxNet(batch_size, 3)
 
     # Define a loss function. reduction='none' is elementwise loss, later summed manually
     criterion = nn.MSELoss(reduction='none')
