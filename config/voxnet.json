@@ -1,14 +1,12 @@
 {
-    "job_name": "resnet",
-    "model_name": "resnet1d",
+    "job_name": "voxnet",
+    "model_name": "voxnet",
 
     "params": {
 
         "n_epochs" : 10000,
         "lr": 0.001,
         "momentum": 0.7,
-        "n_filters": 16,
-        "n_hidden": 64,
         "train_fraction": 0.8,
         "batch_size": 256
 
