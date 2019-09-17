@@ -6,7 +6,7 @@ import utils
 from datetime import datetime
 import logging
 
-from models.onedee import CNN1D
+from models.onedee import CNN1D, Tratt
 from models import voxnet as vx
 from models import resnet as rs
 from trainer import Trainer
@@ -50,6 +50,8 @@ def train(config, model_dir):
         model = resnet18(in_channels=1, dimension=1, num_classes=3)
     elif model_name == "voxnet":
         model = vx.VoxNet(batch_size, 3)
+    elif model_name == "tratt":
+        model = Tratt(batch_size)
 
     # Define a loss function. reduction='none' is elementwise loss, later summed manually
     criterion = nn.MSELoss(reduction='none')
