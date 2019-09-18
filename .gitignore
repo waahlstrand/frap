@@ -1,0 +1,18 @@
+# Ignore all logs
+*.log
+
+# Ignore all models
+*.pt
+
+# Ignore all events
+events.*
+
+# Ignore all pycaches
+*.pyc
+
+# Ignore settings.json
+settings.json
+
+# Ignore all npy, bin
+*.npy
+*.bin

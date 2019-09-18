@@ -57,8 +57,8 @@ def train(config, model_dir):
     criterion = nn.MSELoss(reduction='none')
 
     # Define an optimizer
-    optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum, nesterov=True)
-
+    #ptimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum, nesterov=True)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
     ############## GET DATALOADERS ########################
     # Get dataset of recovery curves
     #dataset = RecoveryDataset(data_path)
