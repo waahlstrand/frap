@@ -1,21 +1,21 @@
 {
-    "job_name": "voxnet",
-    "model_name": "voxnet",
+    "job_name": "top_heavy_tratt_sgd",
+    "model_name": "top_heavy_tratt",
 
     "params": {
 
-        "n_epochs" : 100,
-        "lr": 0.0001,
+        "n_epochs" : 500,
+        "lr": 0.01,
         "momentum": 0.7,
-        "n_filters": 16,
-        "n_hidden": 64,
+        "n_filters": 0,
+        "n_hidden": 0,
         "train_fraction": 0.8,
-        "batch_size": 16
+        "batch_size": 64
 
     },
     "verbose": "True",
     "cuda": "True",
-    "gpu": 0,
+    "gpu": 1,
     "mode": "spatiotemporal",
     "tensorboard": "True",
     "data_path": "",

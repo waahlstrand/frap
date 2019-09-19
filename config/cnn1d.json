@@ -1,5 +1,5 @@
 {
-    "job_name": "cnn1d",
+    "job_name": "test",
     "model_name": "cnn1d",
     "params": {
 
@@ -14,9 +14,10 @@
     },
     "verbose": "True",
     "cuda": "True",
+    "gpu": 0,
     "mode": "rcs",
     "tensorboard": "True",
-    "data_path": "rcs",
+    "data_path": "/home/sms/vws/data/rcs",
     "validation": "True"
     
 }
