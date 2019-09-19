@@ -6,7 +6,8 @@ import utils
 from datetime import datetime
 import logging
 
-from models.onedee import CNN1D, Tratt
+from models.temporal import CNN1d
+from models.spatiotemporal import Tratt, TopHeavyTratt
 from models import voxnet as vx
 from models import resnet as rs
 from trainer import Trainer
@@ -14,7 +15,7 @@ from trainer import Trainer
 parser = argparse.ArgumentParser()
 
 #parser.add_argument("--data_path", default='data', help='Path to the data.')
-parser.add_argument('--config_name', default='config.json', help="Name of .json file")
+parser.add_argument('--config', default='config.json', help="Name of .json file")
 #parser.add_argument('--job_name', default='training', help="Name of job file.")
 #parser.add_argument("--verbose", default = 'True', help="Print log to terminal.")
 
@@ -45,13 +46,15 @@ def train(config, model_dir):
 
     ############### INITIALISE MODEL ######################
     if model_name == "cnn1d":
-        model = CNN1D(n_filters=n_filters, n_hidden=n_hidden)
+        model = CNN1d(n_filters=n_filters, n_hidden=n_hidden)
     elif model_name == "resnet1d":
         model = resnet18(in_channels=1, dimension=1, num_classes=3)
     elif model_name == "voxnet":
         model = vx.VoxNet(batch_size, 3)
     elif model_name == "tratt":
         model = Tratt(batch_size)
+    elif model_name == "top_heavy_tratt":
+        model = TopHeavyTratt(batch_size)
 
     # Define a loss function. reduction='none' is elementwise loss, later summed manually
     criterion = nn.MSELoss(reduction='none')
@@ -84,7 +87,7 @@ if __name__ == '__main__':
     # Parse arguments to program
     args = parser.parse_args()
 
-    config_name = args.config_name
+    config_name = args.config
     config_path = os.path.join("config/", config_name)
 
     # Extract parameters

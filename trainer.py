@@ -22,6 +22,7 @@ class Trainer:
         self.tensorboard = utils.str_to_bool(self.config.tensorboard)
 
         self.cuda       = utils.str_to_bool(self.config.cuda)
+        self.gpu        = str(self.config.gpu)
         self.verbose    = utils.str_to_bool(self.config.verbose)
 
         self.batch_size = self.config.params.batch_size
@@ -164,7 +165,7 @@ class Trainer:
         if cuda_available and cuda:
             
             logging.info("GPU is available. Using GPU.")
-            device = torch.device("cuda:1")
+            device = torch.device("cuda:"+self.gpu)
 
         else:
             logging.info("GPU not available. Using CPU.")
