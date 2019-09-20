@@ -84,3 +84,20 @@ def get_dataloaders(mode, data_path, validation):
         train = SpatiotemporalDataset()
 
         return train, None
+
+def get_dataset(source, data_path, batch_size):
+
+    
+    if source == "temporal":
+
+        dataset = RecoveryTrainingDataset(data_path)
+
+    elif source == "spatiotemporal":
+        
+        dataset = SpatiotemporalDataset()
+
+    elif source == "generate":
+
+        dataset = MatlabGenerator(batch_size)
+
+    return dataset
