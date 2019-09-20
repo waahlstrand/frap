@@ -7,7 +7,7 @@ from datetime import datetime
 import logging
 
 from models.temporal import CNN1d
-from models.spatiotemporal import Tratt, TopHeavyTratt
+from models.spatiotemporal import Tratt, TopHeavyTratt, Filterer
 from models import voxnet as vx
 from models import resnet as rs
 from trainer import Trainer
@@ -55,6 +55,8 @@ def train(config, model_dir):
         model = Tratt(batch_size)
     elif model_name == "top_heavy_tratt":
         model = TopHeavyTratt(batch_size)
+    elif model_name == "filterer":
+        model = Filterer(batch_size)
 
     # Define a loss function. reduction='none' is elementwise loss, later summed manually
     criterion = nn.MSELoss(reduction='none')
