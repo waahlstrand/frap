@@ -4,7 +4,7 @@
 
     "params": {
 
-        "n_epochs" : 500,
+        "n_epochs" : 5000,
         "lr": 0.01,
         "momentum": 0.7,
         "n_filters": 0,
@@ -15,7 +15,7 @@
     },
     "verbose": "True",
     "cuda": "True",
-    "gpu": 0,
+    "gpu": 1,
     "source": "generate",
     "tensorboard": "True",
     "data_path": "",

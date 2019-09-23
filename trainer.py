@@ -1,3 +1,4 @@
+from torch.utils.tensorboard import SummaryWriter
 import torch
 import torch.nn as nn
 import numpy as np
@@ -5,7 +6,6 @@ import logging
 import os
 import utils
 from torch.utils.data import Dataset, DataLoader
-from torch.utils.tensorboard import SummaryWriter
 
 class BaseTrainer:
 
@@ -31,7 +31,7 @@ class BaseTrainer:
         self.n_epochs       = self.config.params.n_epochs
         self.train_fraction = self.config.params.train_fraction
 
-
+        
         self.epochs = range(1, self.n_epochs+1)
 
         self.train_loader, self.val_loader = self._split_data(self.dataset, self.validation, self.train_fraction)
@@ -43,16 +43,16 @@ class BaseTrainer:
 
             self.writer = SummaryWriter(tensorboard_dir)
 
-    def _run_epoch(self, epoch, validation, loader):
+    def _run_epoch(self, epoch, training, loader):
         
-        if validation:
-            self.model.eval()
-        else:
+        if training:
             self.model.train()
+        else:
+            self.model.eval()
 
         full_loss       = 0
         element_loss    = 0
-        with torch.set_grad_enabled(validation):
+        with torch.set_grad_enabled(training):
             for i, (X, y) in enumerate(loader):
 
                 X = X.to(self.device)
@@ -66,7 +66,7 @@ class BaseTrainer:
                 # Calculate the MSE loss
                 loss = self.criterion(prediction, y)
 
-                if not validation:
+                if training:
                     # Backpropagate the loss
                     loss.mean().backward()
      
@@ -84,11 +84,11 @@ class BaseTrainer:
 
     def _train_epoch(self, epoch):
 
-        return self._run_epoch(epoch, False, self.train_loader)
+        return self._run_epoch(epoch, True, self.train_loader)
 
     def _validate_epoch(self, epoch):
 
-        return self._run_epoch(epoch, True, self.val_loader)
+        return self._run_epoch(epoch, False, self.val_loader)
 
     def _train_implementation(self):
         raise NotImplementedError
@@ -332,7 +332,7 @@ class Approximator(BaseTrainer):
     def _train_implementation(self):
 
         # Initialize generator for MATLAB data
-        self.generator.initialize_session()
+        #self.generator.initialize_session()
 
         # Initialize parallel processing pool
         self.generator.initialize_pool()

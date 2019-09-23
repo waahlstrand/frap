@@ -1,6 +1,6 @@
 {
-    "job_name": "test",
-    "model_name": "tratt",
+    "job_name": "filterer",
+    "model_name": "filterer",
 
     "params": {
 
@@ -10,15 +10,15 @@
         "n_filters": 0,
         "n_hidden": 0,
         "train_fraction": 0.8,
-        "batch_size": 32
+        "batch_size": 20
 
     },
     "verbose": "True",
     "cuda": "True",
     "gpu": 0,
-    "source": "generate",
+    "mode": "spatiotemporal",
     "tensorboard": "True",
     "data_path": "",
-    "validation": "False"
+    "validation": "True"
     
 }
