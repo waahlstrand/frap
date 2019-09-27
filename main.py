@@ -5,11 +5,6 @@ import torch.nn as nn
 import utils
 from datetime import datetime
 import logging
-
-from models.temporal import CNN1d
-from models.spatiotemporal import Tratt, TopHeavyTratt, Filterer
-from models import voxnet as vx
-from models import resnet as rs
 from trainer import Trainer
 
 parser = argparse.ArgumentParser()
@@ -32,48 +27,35 @@ def train(config, model_dir):
 
     params      = config.params
     data_path   = config.data_path
-    mode        = config.mode
+    source      = config.source
     model_name  = config.model_name
 
     n_epochs    = params.n_epochs
     lr          = params.lr
     momentum    = params.momentum
-    n_filters   = params.n_filters
-    n_hidden    = params.n_hidden
     batch_size  = params.batch_size
 
     use_val     = utils.str_to_bool(config.validation)
 
     ############### INITIALISE MODEL ######################
-    if model_name == "cnn1d":
-        model = CNN1d(n_filters=n_filters, n_hidden=n_hidden)
-    elif model_name == "resnet1d":
-        model = resnet18(in_channels=1, dimension=1, num_classes=3)
-    elif model_name == "voxnet":
-        model = vx.VoxNet(batch_size, 3)
-    elif model_name == "tratt":
-        model = Tratt(batch_size)
-    elif model_name == "top_heavy_tratt":
-        model = TopHeavyTratt(batch_size)
-    elif model_name == "filterer":
-        model = Filterer(batch_size)
+    model       = utils.get_model(model_name, params)
 
     # Define a loss function. reduction='none' is elementwise loss, later summed manually
-    criterion = nn.MSELoss(reduction='none')
+    criterion   = nn.MSELoss(reduction='none')
 
     # Define an optimizer
     #ptimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum, nesterov=True)
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
+    optimizer   = torch.optim.Adam(model.parameters(), lr=lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
     ############## GET DATALOADERS ########################
     # Get dataset of recovery curves
     #dataset = RecoveryDataset(data_path)
     logging.info("Loading the datasets...")
-    training, validation = utils.get_dataloaders(mode, data_path, use_val)
+    dataset = utils.get_dataset(source, data_path, params)
     logging.info("- Loading complete.")
 
     # Initialize a Regressor training object
     logging.info("Initializing trainer object...")    
-    trainer = Trainer(model, config, criterion, optimizer, training, validation, model_dir)
+    trainer = Trainer(model, config, criterion, optimizer, dataset, model_dir)
     logging.info("- Initialization complete.")
 
     ################ TRAIN THE MODEL ######################

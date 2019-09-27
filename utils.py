@@ -2,6 +2,9 @@ import numpy as np
 import json
 import logging
 from data.datasets import *
+from models.spatiotemporal import *
+from models.temporal import *
+from models.resnet import resnet18
 
 class Configuration(dict):
     """ Dictionary subclass whose entries can be accessed by attributes
@@ -85,7 +88,7 @@ def get_dataloaders(mode, data_path, validation):
 
         return train, None
 
-def get_dataset(source, data_path, batch_size):
+def get_dataset(source, data_path, params):
 
     
     if source == "temporal":
@@ -98,6 +101,25 @@ def get_dataset(source, data_path, batch_size):
 
     elif source == "generate":
 
-        dataset = MatlabGenerator(batch_size)
+        dataset = MatlabGenerator(batch_size=params.batch_size, noise_level=params.noise_level, n_workers=params.batch_size)
 
     return dataset
+
+def get_model(model_name, params):
+
+    if model_name == "cnn1d":
+        model = CNN1d(n_filters=params.n_filters, n_hidden=params.n_hidden)
+    elif model_name == "resnet18":
+        model = resnet18(in_channels=params.n_channels, dimension=2, num_classes=3)
+    elif model_name == "voxnet":
+        model = vx.VoxNet(params.batch_size, 3)
+    elif model_name == "tratt":
+        model = Tratt(params.batch_size)
+    elif model_name == "top_heavy_tratt":
+        model = TopHeavyTratt(params.batch_size)
+    elif model_name == "filterer":
+        model = Filterer(params.batch_size)
+    else:
+        raise NotImplementedError("Model not implemented.")
+
+    return model
