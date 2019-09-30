@@ -299,3 +299,92 @@ class BottomHeavyTratt(nn.Module):
         y = self.head(x)
 
         return y
+class ConvLSTM(nn.Module):
+
+    def __init__(self, n_channels, n_hidden_channels, kernel_size, n_layers=1, shape=(1, 110, 256, 256)):
+
+        super(ConvLSTM, self).__init__()
+        self.n_layers           = n_layers
+        self.n_input_channels   = n_channels
+        self.n_hidden_channels  = n_hidden_channels
+        self.kernel_size        = kernel_size
+        self.shape              = shape
+        self.sequence_length    = self.shape[1]
+
+
+        self.layers = []
+
+        # TODO: Implement multiple layers with different number of filters
+        for idx in range(self.n_layers):
+            if idx == 0: 
+                n_channels = self.n_input_channels
+            else: 
+                n_channels = self.n_hidden_channels
+
+            self.layers.append(ConvLSTMCell(n_channels, self.n_hidden_channels, self.kernel_size, self.shape))
+
+    def forward(self, x, h = None):
+
+        for layer in self.layers:
+            ###############################
+            for t in range(self.sequence_length):
+                ##################################
+                ##################################
+
+
+        return xs, hs
+
+
+
+class ConvLSTMCell(nn.Module):
+
+    def __init__(self, n_channels, n_hidden_channels, kernel_size, shape=(1, 110, 256, 256)):
+
+        super(ConvLSTMCell, self).__init__()
+
+        self.shape = shape
+
+        self.n_channels         = n_channels
+        self.n_hidden_channels  = n_hidden_channels
+        self.channel_axis       = 1
+        self.activation         = F.relu
+
+        if isinstance(kernel_size, list):
+            self.input_kernel, self.hidden_kernel = kernel_size
+        else:
+            self.input_kernel    = kernel_size
+            self.hidden_kernel   = kernel_size
+
+        self.conv           = nn.Conv2d(self.n_channels,        self.n_hidden_channels, self.input_kernel,  bias=True)
+        self.recurrent_conv = nn.Conv2d(self.n_hidden_channels, self.n_hidden_channels, self.hidden_kernel, bias=False)
+
+
+
+    def forward(self, x, state):
+
+        h, c = state
+
+        #updated = torch.cat([x, h], dim=self.channel_axis)
+
+        # Convolved input states
+        x_i = self.conv(x)
+        x_f = self.conv(x)
+        x_c = self.conv(x)
+        x_o = self.conv(x)
+
+        # Convolved hidden states
+        h_i = self.recurrent_conv(h)
+        h_f = self.recurrent_conv(h)
+        h_c = self.recurrent_conv(h)
+        h_o = self.recurrent_conv(h)
+
+        # Calculate gate values
+        i = self.activation(x_i + h_i)
+        f = self.activation(x_f + h_f)
+        c = f * c + i * F.tanh(x_c + h_c)
+        o = self.activation(x_o + h_o)
+        h = o * F.tanh(c)
+
+        return h, (h, c)
+
+
