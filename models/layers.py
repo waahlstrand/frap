@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
-from utils import output_size_from_conv
+#from utils import output_size_from_conv
 
 def conv1k(in_planes, out_planes, stride=1, dimension=2):
     """1x1 convolution"""
@@ -25,7 +25,7 @@ def conv3k(in_planes, out_planes, stride=1, groups=1, dilation=1, dimension=2):
         return nn.Conv3d(in_planes, out_planes, kernel_size=3, stride=stride,
                         padding=dilation, groups=groups, bias=False, dilation=dilation)
 
-class Convolution1D(nn.Module):
+""" class Convolution1D(nn.Module):
 
     def __init__(self, in_channels, out_channels, sequence_length, conv_kernel, maxpool_kernel, stride=1, padding=0, dilation=1, groups=1, bias=True):
 
@@ -74,4 +74,4 @@ class Convolution1D(nn.Module):
 
     def output_size(self):
 
-        return self.out_channels*self.maxpool_size
+        return self.out_channels*self.maxpool_size """

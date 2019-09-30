@@ -229,8 +229,8 @@ class ResNet(nn.Module):
 
     def forward(self, x):
 
-        batch_size = x.shape[0]
-        x = x.view(batch_size, 1, -1)
+        if self.inplanes > 1:
+            x = x.squeeze()
 
         x = self.conv1(x)
         x = self.bn1(x)

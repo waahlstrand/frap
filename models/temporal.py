@@ -2,8 +2,6 @@ import torch
 import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
-from utils import output_size_from_conv
-from models.layers import Convolution1D
 #from torch.utils.data import Dataset, DataLoader
 
 
@@ -84,7 +82,7 @@ class LSTM_to_FFNN(nn.Module):
 
         return y
 
-class CNN1d(nn.Module):
+""" class CNN1d(nn.Module):
 
     def __init__(self, n_filters = 64, n_hidden = 16):
         
@@ -142,5 +140,5 @@ class CNN1d(nn.Module):
         y = self.linear3(x)
 
         return y
-
+ """
 
