@@ -88,7 +88,7 @@ def get_dataloaders(mode, data_path, validation):
 
         return train, None
 
-def get_dataset(source, data_path, params):
+def get_dataset(source, data_path, directory, mode, params):
 
     
     if source == "temporal":
@@ -101,7 +101,7 @@ def get_dataset(source, data_path, params):
 
     elif source == "generate":
 
-        dataset = MatlabGenerator(batch_size=params.batch_size, noise_level=params.noise_level, n_workers=params.batch_size)
+        dataset = MatlabGenerator(batch_size=params.batch_size, directory=directory, mode=mode, noise_level=params.noise_level, n_workers=params.batch_size)
 
     return dataset
 
@@ -110,15 +110,21 @@ def get_model(model_name, params):
     if model_name == "cnn1d":
         model = CNN1d(n_filters=params.n_filters, n_hidden=params.n_hidden)
     elif model_name == "resnet18":
-        model = resnet18(in_channels=params.n_channels, dimension=2, num_classes=3)
+        model = resnet18(in_channels=1, dimension=3, num_classes=3)
     elif model_name == "voxnet":
         model = vx.VoxNet(params.batch_size, 3)
     elif model_name == "tratt":
         model = Tratt(params.batch_size)
     elif model_name == "top_heavy_tratt":
         model = TopHeavyTratt(params.batch_size)
-    elif model_name == "filterer":
-        model = Filterer(params.batch_size)
+    elif model_name == "carl":
+        model = Carl(params.batch_size)
+    elif model_name == "Net":
+        model = Net(params.batch_size)
+    elif model_name == "fundo":
+        model = Fundo(params.batch_size)
+    elif model_name == "fouriernet":
+        model = FourierNet(params.batch_size)
     else:
         raise NotImplementedError("Model not implemented.")
 

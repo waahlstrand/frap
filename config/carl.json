@@ -1,16 +1,15 @@
 {
-    "job_name": "test",
-    "model_name": "tratt",
+    "job_name": "carl",
+    "model_name": "carl",
 
     "params": {
 
-        "n_epochs" : 500,
-        "lr": 0.01,
-        "momentum": 0.7,
-        "n_filters": 0,
-        "n_hidden": 0,
+        "n_epochs" : 1000,
+        "lr": 0.0001,
+        "momentum": 0.9,
+        "noise_level": 0.05,
         "train_fraction": 0.8,
-        "batch_size": 32
+        "batch_size": 4
 
     },
     "verbose": "True",
@@ -20,6 +19,6 @@
     "tensorboard": "True",
     "data_path": "",
     "validation": "False",
-    "clip": 10
+    "clip": 0.00001
     
 }

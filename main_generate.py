@@ -28,6 +28,7 @@ def train(config, model_dir):
     params      = config.params
     data_path   = config.data_path
     source      = config.source
+    mode        = config.mode
     model_name  = config.model_name
 
     n_epochs    = params.n_epochs
@@ -45,14 +46,14 @@ def train(config, model_dir):
 
     #writer = SummaryWriter()
     # Define an optimizer
-    optimizer   = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum, nesterov=True)
-    #optimizer = torch.optim.Adam(model.parameters(), lr=lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
+    #optimizer   = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum, nesterov=True)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
 
     ############## GET DATALOADERS ########################
     # Get dataset of recovery curves
     #dataset = RecoveryDataset(data_path)
     logging.info("Loading the datasets...")
-    dataset = utils.get_dataset(source, data_path, params)
+    dataset = utils.get_dataset(source, data_path,model_dir, mode, params)
     logging.info("- Loading complete.")
 
     # Initialize a Regressor training object

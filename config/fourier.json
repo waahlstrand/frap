@@ -1,15 +1,15 @@
 {
-    "job_name": "test",
-    "model_name": "top_heavy_tratt",
+    "job_name": "fourier",
+    "model_name": "fouriernet",
 
     "params": {
 
         "n_epochs" : 1000,
-        "lr": 0.01,
+        "lr": 0.001,
         "momentum": 0.9,
         "noise_level": 0.05,
         "train_fraction": 0.8,
-        "batch_size": 64
+        "batch_size": 8
 
     },
     "verbose": "True",
@@ -18,7 +18,9 @@
     "source": "generate",
     "tensorboard": "True",
     "data_path": "",
-    "validation": "True",
-    "clip": 10
+    "validation": "False",
+    "clip": 0.0001,
+    "mode": "fourier"
+
     
 }

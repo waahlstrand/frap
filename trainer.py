@@ -27,6 +27,8 @@ class BaseTrainer:
         self.gpu        = str(self.config.gpu)
         self.verbose    = utils.str_to_bool(self.config.verbose)
         self.validation = utils.str_to_bool(self.config.validation)
+        self.clip       = self.config.clip
+        self.mode       = self.config.mode
 
         self.batch_size     = self.config.params.batch_size
         self.n_epochs       = self.config.params.n_epochs
@@ -54,15 +56,27 @@ class BaseTrainer:
         full_loss       = 0
         element_loss    = 0
         with torch.set_grad_enabled(training):
-            for i, (X, y) in enumerate(loader):
-
-                X = X.to(self.device)
-                y = y.to(self.device)
+            for i, batch in enumerate(loader):
 
                 self.optimizer.zero_grad()
 
-                # Feed forward the data
-                prediction = self.model(X)
+                if self.mode == "spatiotemporal" or self.mode == "temporal" or self.mode == "fourier":
+
+                    X = batch["X"].to(self.device)
+                    y = batch["y"].to(self.device)
+
+                    # Feed forward the data
+                    prediction = self.model(X)
+
+                elif self.mode == "all":
+                    
+                    X   = batch["X"].to(self.device)
+                    rcs = batch["rcs"].to(self.device)
+                    var = batch["var"].to(self.device)
+                    y   = batch["y"].to(self.device)
+
+                    # Feed forward the data
+                    prediction = self.model(X, rcs, var)
 
                 # Calculate the MSE loss
                 loss = self.criterion(prediction, y)
@@ -70,7 +84,10 @@ class BaseTrainer:
                 if training:
                     # Backpropagate the loss
                     loss.mean().backward()
-     
+
+                    if self.clip > 0:
+                        nn.utils.clip_grad_norm_(self.model.parameters(), self.clip)
+
                     self.optimizer.step()
 
                 #torch.nn.utils.clip_grad_norm_(model.parameters(), options.clip)

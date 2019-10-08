@@ -1,15 +1,15 @@
 {
-    "job_name": "test",
-    "model_name": "tratt",
+    "job_name": "mung",
+    "model_name": "Net",
 
     "params": {
 
-        "n_epochs" : 5000,
-        "lr": 0.01,
+        "n_epochs" : 10000,
+        "lr": 0.001,
         "momentum": 0.9,
         "noise_level": 0.05,
         "train_fraction": 0.8,
-        "batch_size": 64
+        "batch_size": 16
 
     },
     "verbose": "True",
@@ -18,6 +18,9 @@
     "source": "generate",
     "tensorboard": "True",
     "data_path": "",
-    "validation": "False"
+    "validation": "False",
+    "clip": 0.0001,
+    "mode": "spatiotemporal"
+
     
 }
