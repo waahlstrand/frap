@@ -1,6 +1,7 @@
 import numpy as np
 import json
 import logging
+import ast
 from data.datasets import *
 from models.spatiotemporal import *
 from models.temporal import *
@@ -61,6 +62,17 @@ def output_size_from_conv(in_size, kernel_size, stride = 1, padding = 0, dilatio
     return int(size)
 
 def str_to_bool(s):
+    """Converts a string with a boolean value to a bool.
+    
+    Arguments:
+        s {str} -- A string of boolean value.
+    
+    Raises:
+        ValueError: Raised if the string value is not "True" or "False".
+    
+    Returns:
+        bool -- Returns the value of the boolean string.
+    """
     if s == 'True':
          return True
     elif s == 'False':
@@ -89,6 +101,20 @@ def get_dataloaders(mode, data_path, validation):
         return train, None
 
 def get_dataset(source, data_path, directory, mode, params):
+    """Utility function for fetching the desired FRAP dataset. Divided into "temporal", 
+    "spatiotemporal" and "generate", they generate train-test split PyTorch datasets and a 
+    generator of unique training data from Matlab, respectively.
+    
+    Arguments:
+        source {str} -- Either "temporal", "spatiotemporal" or "generate".
+        data_path {str} -- Path to the dataset samples
+        directory {str} -- Path to the target directory of the generator
+        mode {str} -- Either "temporal", "spatiotemporal", "all" or "Fourier", the type of data generated.
+        params {Configuration} -- A Configuration dict of parameters, such as batch size.
+    
+    Returns:
+        torch.nn.utils.Dataset -- A dataset to be loaded to a PyTorch Dataloader.
+    """
 
     
     if source == "temporal":
@@ -106,6 +132,21 @@ def get_dataset(source, data_path, directory, mode, params):
     return dataset
 
 def get_model(model_name, params):
+    """A utility function for fetching the desired PyTorch model to train.
+    
+    Arguments:
+        model_name {str} -- The name of the model.
+        params {Configuration} -- A Configuration dict of parameters to the model.
+    
+    Raises:
+        NotImplementedError: Raised if the model name supplied is not implemented.
+    
+    Returns:
+        torch.nn.Module -- Returns a PyTorch module.
+    """
+
+    # Interpret the shape parameter, given as a string, into a tuple.
+    shape = ast.literal_eval(params.shape)
 
     if model_name == "cnn1d":
         model = CNN1d(n_filters=params.n_filters, n_hidden=params.n_hidden)
@@ -114,17 +155,19 @@ def get_model(model_name, params):
     elif model_name == "voxnet":
         model = vx.VoxNet(params.batch_size, 3)
     elif model_name == "tratt":
-        model = Tratt(params.batch_size)
+        model = Tratt(params.batch_size, shape=shape)
     elif model_name == "top_heavy_tratt":
-        model = TopHeavyTratt(params.batch_size)
+        model = TopHeavyTratt(params.batch_size, shape=shape)
     elif model_name == "carl":
-        model = Carl(params.batch_size)
+        model = Carl(params.batch_size, input_shape=shape)
     elif model_name == "Net":
-        model = Net(params.batch_size)
+        model = Net(params.batch_size, input_shape=shape)
     elif model_name == "fundo":
-        model = Fundo(params.batch_size)
+        model = Fundo(params.batch_size, shape=shape)
     elif model_name == "fouriernet":
-        model = FourierNet(params.batch_size)
+        model = FourierNet(params.batch_size, input_shape=shape)
+    elif model_name == "fouriertratt":
+        model = FourierTratt(params.batch_size, shape=shape)
     else:
         raise NotImplementedError("Model not implemented.")
 

@@ -1,6 +1,6 @@
 {
     "job_name": "fourier",
-    "model_name": "fouriernet",
+    "model_name": "fouriertratt",
 
     "params": {
 
@@ -9,7 +9,9 @@
         "momentum": 0.9,
         "noise_level": 0.05,
         "train_fraction": 0.8,
-        "batch_size": 8
+        "batch_size": 16,
+        "shape": "(1, 110, 20, 20)"
+
 
     },
     "verbose": "True",
@@ -19,7 +21,7 @@
     "tensorboard": "True",
     "data_path": "",
     "validation": "False",
-    "clip": 0.0001,
+    "clip": 0,
     "mode": "fourier"
 
     
