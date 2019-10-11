@@ -25,18 +25,20 @@ def train(config, model_dir):
     else:
         torch.manual_seed(2222)
 
-    params      = config.params
-    data_path   = config.data_path
-    source      = config.source
-    mode        = config.mode
-    model_name  = config.model_name
+    params          = config.params
+    data_path       = config.data_path
+    source          = config.source
+    mode            = config.mode
+    model_name      = config.model_name
+    optimizer_name  = config.optimizer_name
 
     n_epochs    = params.n_epochs
     lr          = params.lr
     momentum    = params.momentum
     batch_size  = params.batch_size
 
-    use_val     = utils.str_to_bool(config.validation)
+    use_transform   = utils.str_to_bool(config.transform)
+    use_val         = utils.str_to_bool(config.validation)
 
     ############### INITIALISE MODEL ######################
     model       = utils.get_model(model_name, params)
@@ -46,14 +48,13 @@ def train(config, model_dir):
 
     #writer = SummaryWriter()
     # Define an optimizer
-    #optimizer   = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum, nesterov=True)
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
+    optimizer   = utils.get_optimizer(model, optimizer_name, params)
 
     ############## GET DATALOADERS ########################
     # Get dataset of recovery curves
     #dataset = RecoveryDataset(data_path)
     logging.info("Loading the datasets...")
-    dataset = utils.get_dataset(source, data_path,model_dir, mode, params)
+    dataset = utils.get_dataset(source, data_path, model_dir, mode, use_transform, params)
     logging.info("- Loading complete.")
 
     # Initialize a Regressor training object

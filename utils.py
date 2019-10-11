@@ -55,11 +55,6 @@ def set_logger(log_path):
         stream_handler.setFormatter(logging.Formatter('%(message)s'))
         logger.addHandler(stream_handler)
 
-def output_size_from_conv(in_size, kernel_size, stride = 1, padding = 0, dilation = 1):
-    
-    size = np.floor( (in_size+ 2*padding-dilation*(kernel_size-1)-1)/stride +1 )
-    
-    return int(size)
 
 def str_to_bool(s):
     """Converts a string with a boolean value to a bool.
@@ -100,7 +95,17 @@ def get_dataloaders(mode, data_path, validation):
 
         return train, None
 
-def get_dataset(source, data_path, directory, mode, params):
+def get_optimizer(model, optimizer_name, params):
+
+    if optimizer_name == "adam":
+        optimizer = torch.optim.Adam(model.parameters(), lr=params.lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
+    elif optimizer_name == "sgd":
+        optimizer   = torch.optim.SGD(model.parameters(), lr=params.lr, momentum=params.momentum, nesterov=True)
+
+    return optimizer
+
+
+def get_dataset(source, data_path, directory, mode, use_transform, params):
     """Utility function for fetching the desired FRAP dataset. Divided into "temporal", 
     "spatiotemporal" and "generate", they generate train-test split PyTorch datasets and a 
     generator of unique training data from Matlab, respectively.
@@ -127,7 +132,12 @@ def get_dataset(source, data_path, directory, mode, params):
 
     elif source == "generate":
 
-        dataset = MatlabGenerator(batch_size=params.batch_size, directory=directory, mode=mode, noise_level=params.noise_level, n_workers=params.batch_size)
+        dataset = MatlabGenerator(batch_size=params.batch_size, 
+                                  directory=directory, 
+                                  mode=mode, 
+                                  transform=use_transform,
+                                  noise_level=params.noise_level, 
+                                  n_workers=params.batch_size)
 
     return dataset
 
@@ -149,7 +159,11 @@ def get_model(model_name, params):
     shape = ast.literal_eval(params.shape)
 
     if model_name == "cnn1d":
-        model = CNN1d(n_filters=params.n_filters, n_hidden=params.n_hidden)
+        model = CNN1d(batch_size = params.batch_size, n_filters=params.n_filters, n_hidden=params.n_hidden)
+    elif model_name == "fc":
+        model = FC(batch_size = params.batch_size, n_hidden=params.n_hidden)
+    elif model_name == "lstm":
+        model = LSTM_to_FFNN(hidden_size = params.n_hidden)
     elif model_name == "resnet18":
         model = resnet18(in_channels=1, dimension=3, num_classes=3)
     elif model_name == "voxnet":

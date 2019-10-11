@@ -1,6 +1,7 @@
 {
     "job_name": "fundo",
     "model_name": "fundo",
+    "optimizer_name": "adam",
 
     "params": {
 

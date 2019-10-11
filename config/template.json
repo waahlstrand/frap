@@ -1,6 +1,7 @@
 {
     "job_name": "name_of_directory",
     "model_name": "name_of_model_to_use",
+    "optimizer_name": "adam",
 
     "params": {
 

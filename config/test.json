@@ -21,6 +21,5 @@
     "validation": "False",
     "clip": 0.0001,
     "mode": "spatiotemporal"
-
     
 }

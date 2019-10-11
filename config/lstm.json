@@ -1,29 +1,28 @@
 {
-    "job_name": "cnn1d",
-    "model_name": "cnn1d",
-    "optimizer_name": "sgd",
+    "job_name": "lstm",
+    "model_name": "lstm",
+    "optimizer_name": "adam",
 
     "params": {
 
-        "n_epochs" : 500,
+        "n_epochs" : 1000,
         "lr": 0.001,
         "momentum": 0.9,
         "noise_level": 0.05,
-        "n_filters": 16,
-        "n_hidden": 32,
+        "n_hidden": 64,
         "train_fraction": 0.8,
-        "batch_size": 32,
+        "batch_size": 64,
         "shape": "(1, 110)"
 
     },
     "verbose": "True",
     "cuda": "True",
-    "gpu": 1,
+    "gpu": 0,
     "source": "generate",
     "tensorboard": "True",
     "data_path": "",
     "validation": "False",
-    "clip": 0,
+    "clip": 0.001,
     "mode": "temporal"
 
     

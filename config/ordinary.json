@@ -1,27 +1,29 @@
 {
-    "job_name": "ordinary",
-    "model_name": "tratt",
+    "job_name":         "ordinary",
+    "model_name":       "tratt",
+    "optimizer_name":   "adam",
 
     "params": {
 
-        "n_epochs" : 1000,
-        "lr": 0.001,
-        "momentum": 0.9,
-        "noise_level": 0.05,
-        "train_fraction": 0.8,
-        "batch_size": 16,
-        "shape": "(1, 110, 256, 256)"
+        "n_epochs" :        15000,
+        "lr":               0.001,
+        "momentum":         0.9,
+        "noise_level":      0.05,
+        "train_fraction":   0.8,
+        "batch_size":       16,
+        "shape":            "(1, 110, 256, 256)"
 
     },
-    "verbose": "True",
-    "cuda": "True",
-    "gpu": 1,
-    "source": "generate",
-    "tensorboard": "True",
-    "data_path": "",
-    "validation": "False",
-    "clip": 0,
-    "mode": "spatiotemporal"
+    "verbose":      "True",
+    "cuda":         "True",
+    "gpu":          1,
+    "source":       "generate",
+    "tensorboard":  "True",
+    "data_path":    "",
+    "validation":   "False",
+    "clip":         0,
+    "mode":         "spatiotemporal",
+    "transform":    "True"
 
     
 }

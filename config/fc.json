@@ -1,6 +1,6 @@
 {
-    "job_name": "cnn1d",
-    "model_name": "cnn1d",
+    "job_name": "fc",
+    "model_name": "fc",
     "optimizer_name": "sgd",
 
     "params": {
@@ -9,8 +9,7 @@
         "lr": 0.001,
         "momentum": 0.9,
         "noise_level": 0.05,
-        "n_filters": 16,
-        "n_hidden": 32,
+        "n_hidden": 64,
         "train_fraction": 0.8,
         "batch_size": 32,
         "shape": "(1, 110)"
@@ -18,7 +17,7 @@
     },
     "verbose": "True",
     "cuda": "True",
-    "gpu": 1,
+    "gpu": 0,
     "source": "generate",
     "tensorboard": "True",
     "data_path": "",
