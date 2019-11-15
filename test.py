@@ -1,6 +1,6 @@
 from torchsummary import summary
 import torch
-from models.spatiotemporal import ConvLSTM, Net, Carl, Fundo, FourierTratt
+from models.spatiotemporal import ConvLSTM, Net, I2D, TopHeavyTratt, ConvFundo, Tratt, TimeSampled
 from models.resnet import resnet18, resnet183d
 from models.temporal import *
 #from models.voxnet import VoxNet
@@ -23,9 +23,10 @@ from models.temporal import *
 #X = torch.rand((16, 1, 110, 256, 256)).cuda()
 #y = model(X)
 #model = Net(batch_size=64, input_shape=(1, 110, 20, 20)).cuda()
-#model = resnet183d(in_channels=1, num_classes=3, dimension=3).cuda()
-model = CNN1d(batch_size=2).cuda()
-#X = torch.rand((64, 1, 110, 20, 20)).cuda()
-#model(X)
+#model = resnet183d(in_channels=1, num_classes=3, dimension=3).cuda("cuda:0")
+#model = TopHeavyTratt(batch_size=16).to("cuda:0")
+model = TimeSampled(batch_size=1, input_shape=(1, 110, 256, 256)).cuda()
+X = torch.rand((4, 1, 110, 256, 256)).cuda()
+print(model(X).shape)
 
-summary(model, (1, 110))
+#summary(model, (1, 110, 256, 256))

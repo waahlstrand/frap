@@ -5,7 +5,7 @@ import torch.nn as nn
 import utils
 from datetime import datetime
 import logging
-from trainer import Approximator, Trainer
+from trainer import Mixed
 
 parser = argparse.ArgumentParser()
 
@@ -29,7 +29,6 @@ def train(config, model_dir):
     data_path       = config.data_path
     source          = config.source
     mode            = config.mode
-    trainer_name    = config.trainer_name
     model_name      = config.model_name
     optimizer_name  = config.optimizer_name
 
@@ -53,13 +52,14 @@ def train(config, model_dir):
 
     ############## GET DATALOADERS ########################
     # Get dataset of recovery curves
+    #dataset = RecoveryDataset(data_path)
     logging.info("Loading the datasets...")
     dataset = utils.get_dataset(source, data_path, model_dir, mode, use_transform, params)
     logging.info("- Loading complete.")
 
     # Initialize a Regressor training object
     logging.info("Initializing trainer object...")    
-    trainer = utils.get_trainer(trainer_name, model, config, criterion, optimizer, dataset, model_dir)
+    trainer = Mixed(model, config, criterion, optimizer, dataset, model_dir)
     logging.info("- Initialization complete.")
 
     ################ TRAIN THE MODEL ######################
@@ -68,8 +68,6 @@ def train(config, model_dir):
     logging.info("- Training complete.")
 
     torch.save(trainer.model, os.path.join(model_dir, now.strftime("%Y%m%d-%H%M") + ".pt"))
-
-    return trainer.loss
 
 
 if __name__ == '__main__':
@@ -93,6 +91,6 @@ if __name__ == '__main__':
     utils.set_logger(os.path.join(model_dir, 'train.log'))
     
     ########## START TRAINING ###########
-    loss = train(config, model_dir)
+    train(config, model_dir)
 
 

@@ -1,11 +1,11 @@
 {
-    "job_name": "name_of_directory",
-    "model_name": "name_of_model_to_use",
+    "job_name": "downsampler",
+    "model_name": "downsampler",
     "optimizer_name": "adam",
 
     "params": {
 
-        "n_epochs" : 5000,
+        "n_epochs" : 1000,
         "lr": 0.001,
         "momentum": 0.9,
         "noise_level": 0.05,
@@ -22,7 +22,8 @@
     "data_path": "",
     "validation": "False",
     "clip": 0,
-    "mode": "all"
+    "mode": "spatiotemporal",
+    "transform":    "False"
 
     
 }

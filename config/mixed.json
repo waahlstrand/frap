@@ -1,20 +1,20 @@
 {
-    "job_name": "longtime",
+    "job_name": "tratt",
     "model_name": "tratt",
-    "trainer_name": "incrementer",
+    "trainer_name": "mixed",
     "optimizer_name": "sgd",
 
     "params": {
 
-        "n_epochs" : 2000,
-        "n_datasets": 10,
-        "lr": 0.001,
+        "n_epochs" : 150,
+        "n_datasets": 5,
+        "lr": 0.0001,
         "momentum": 0.99,
         "decay": 0,
-        "noise_level": 0.2,
-        "train_fraction": 0.75,
-        "dataset_size": 4096,
-        "batch_size": 8,
+        "noise_level": 0.1,
+        "train_fraction": 0.7,
+        "dataset_size": 1024,
+        "batch_size": 32,
         "shape": "(1, 110, 256, 256)"
 
     },

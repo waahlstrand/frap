@@ -1,62 +1,104 @@
-import os
-
-#os.environ["CUDA_VISIBLE_DEVICES"] = "1, 2"
-import torch
-import torch.nn as nn
-import ray
-from ray import tune
-from models import CNN1D
-from trainer import Trainer 
-from datasets import RecoveryTrainingDataset, RecoveryValidationDataset
 import numpy as np
+import torch
+import utils
+import itertools
+import os
+import json
+import logging
+from main import train
 
 
-def train(config):
+if __name__ == '__main__':
 
-    training = RecoveryTrainingDataset("/home/sms/vws/frappe/new_data")
-    validation = RecoveryValidationDataset("/home/sms/vws/frappe/new_data")
+    # Parameter sets
+    ##### CONSTANT PARAMETERS #####
+    n_epochs        = [100]
+    n_datasets      = [2]
+    dataset_size    = [32]
+    batch_size      = [64]
+    shape           = ["(1, 110, 256, 256)"]
+    noise_level     = [0.1]
+    train_fraction  = [0.7]
 
-    params  = config["params"]
-    model   = CNN1D(params["n_filter"], params["n_hidden"])
+    ##### SEARCHABLE PARAMETERS #####
+    decay           = [0, 0.5]
+    lr              = [1e-5, 1e-4, 1e-3]
+    momentum        = [1e-8, 0.5, 0.99]
+    #kernel_size     = [2, 3]
+    #channel         = [1, 16, 32]
 
-    criterion = config["criterion"]
 
+    params      = {'n_epochs': n_epochs,
+                   'n_datasets': n_datasets,
+                   'dataset_size': dataset_size,
+                   'batch_size': batch_size,
+                   'shape': shape,
+                   'decay': decay,
+                   'lr': lr, 
+                   'momentum': momentum, 
+                   #'kernel_size': kernel_size, 
+                   #'channels': channel,
+                   'noise_level': noise_level,
+                   'train_fraction': train_fraction}
 
-    trainer = Trainer(model, 
-                      criterion, 
-                      torch.optim.SGD(model.parameters(), 
-                                      lr=params["lr"], 
-                                      momentum=params["momentum"], 
-                                      nesterov=True), 
-                      config, 
-                      training, 
-                      validation)
+    config_permutations =  [dict(zip(params, v)) for v in itertools.product(*params.values())]
 
-    trainer.train()
+    jobs = []
 
-    tune.track.log(mean_loss=trainer.loss)
+    for params in config_permutations:
 
-N_EPOCHS        = 500
-TRAIN_FRACTION  = 0.8
-BATCH_SIZE      = 128
-
-config = {"device": 1, # 0 means CPU, 1 the first GPU, 2 second GPU
-          "criterion": nn.MSELoss(reduction='none'),
-          "settings": {"train_size": TRAIN_FRACTION,
-                       "epochs": N_EPOCHS,
-                       "batch_size": BATCH_SIZE},
-          "logs": None,
-          "verbose": False,
-          "params": {"n_hidden": tune.grid_search([16, 32, 64]),
-                     "n_filter": tune.grid_search([16, 32, 64]),
-                     "lr": tune.grid_search([0.001, 0.01, 0.1]),
-                     "momentum": tune.uniform(0,1)
-                     }
+        # Main configuration
+        main_config = {
+        "job_name": "tuning",
+        "model_name": "tratt",
+        "trainer_name": "trainer",
+        "optimizer_name": "sgd",
+        'params': params,
+        "verbose": "True",
+        "cuda": "True",
+        "gpu": 0,
+        "source": "spatiotemporal",
+        "tensorboard": "True",
+        "data_path": "",
+        "validation": "True",
+        "clip": 0,
+        "mode": "spatiotemporal",
+        "transform":  "False"
         }
 
-#ray.init(num_cpus=88, num_gpus=0)
-analysis = tune.run(train, config=config, 
-                    resources_per_trial={"cpu": 64}
-                    )
+        jobs.append(main_config)
 
-print("Best config is", analysis.get_best_config(metric = "mean_loss"))
+
+    ########## START TRAINING ###########
+    losses = []
+    i = 0
+    for job in jobs:
+        
+        i = i + 1
+        # Extract parameters
+        config = utils.Configuration.from_nested_dict(job)
+
+        job_name    = config.job_name
+        model_dir = os.path.join("saved/", job_name)
+
+        if not os.path.exists(model_dir):
+            os.makedirs(model_dir)
+
+        # Initialize logger
+        utils.set_logger(os.path.join(model_dir, 'train_'+str(i)+'.log'))
+
+        logging.info("Starting new job...")  
+        loss = train(config, model_dir)
+
+        # Print data to file and save
+        job.update({'loss': loss.data.tolist()})
+
+        with open(os.path.join(model_dir,'config'+str(i)+'.json'), 'w') as fp:
+            json.dump(job, fp)        
+
+
+        losses.append(loss)
+        
+        logging.info("- Job finished.")  
+
+    print(losses)

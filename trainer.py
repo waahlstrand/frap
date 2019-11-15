@@ -5,6 +5,7 @@ import torch.nn as nn
 import numpy as np
 import logging
 import os
+import shutil
 import utils
 from torch.utils.data import Dataset, DataLoader
 
@@ -19,7 +20,10 @@ class BaseTrainer:
         self.criterion  = criterion
         self.optimizer  = optimizer
 
-        self.loss       = 0
+        self.loss       = []
+        self.parameters = 3
+
+        self.save_path  = os.path.join(model_dir, "states")
 
         self.tensorboard = utils.str_to_bool(self.config.tensorboard)
 
@@ -41,8 +45,16 @@ class BaseTrainer:
 
         if self.tensorboard:
             tensorboard_dir = os.path.join(model_dir, "logs/")
+
             if not os.path.exists(tensorboard_dir):
                 os.makedirs(tensorboard_dir)
+            else:
+                try:
+                    shutil.rmtree(tensorboard_dir)
+                except OSError as e:
+                    print ("Error: %s - %s." % (e.filename, e.strerror))
+
+
 
             self.writer = SummaryWriter(tensorboard_dir)
 
@@ -96,7 +108,7 @@ class BaseTrainer:
                 element_loss += torch.sum(loss.detach(), 0)
 
 
-        result = {"loss": full_loss/(self.model.output_size*len(loader.dataset)), "param": element_loss/len(loader.dataset)}
+        result = {"loss": full_loss/(self.parameters*len(loader.dataset)), "param": element_loss/len(loader.dataset)}
 
         return result
 
@@ -138,17 +150,27 @@ class BaseTrainer:
 
         if validation:
 
-            n_train = int(train_size * len(self.dataset))
-            n_val   = len(self.dataset) - n_train
+            if  len(dataset) == 2:# or (not isinstance(dataset, list)) or (not isinstance(dataset, tuple)):
 
-            train_dataset, val_dataset = torch.utils.data.random_split(dataset, [n_train, n_val])
+                train_loader    = torch.utils.data.DataLoader(dataset[0], batch_size=self.batch_size, shuffle=True, num_workers=2)
+                val_loader      = torch.utils.data.DataLoader(dataset[1], batch_size=self.batch_size, shuffle=True, num_workers=2)
+                
+            else:
 
-            train_loader    = torch.utils.data.DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=4)
-            val_loader      = torch.utils.data.DataLoader(val_dataset, batch_size=self.batch_size, shuffle=True, num_workers=4)
-            
+                n_train = int(train_size * len(self.dataset))
+                n_val   = len(self.dataset) - n_train
+
+                train_dataset, val_dataset = torch.utils.data.random_split(dataset, [n_train, n_val])
+
+                train_loader    = torch.utils.data.DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=2)
+                val_loader      = torch.utils.data.DataLoader(val_dataset, batch_size=self.batch_size, shuffle=True, num_workers=2)
+
+
+                
+
         else:
 
-            train_loader    = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size, shuffle=True, num_workers=4)
+            train_loader    = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size, shuffle=True, num_workers=2)
             val_loader      = None
 
 
@@ -162,6 +184,7 @@ class Approximator(BaseTrainer):
         super().__init__(model, config, criterion, optimizer, dataset, model_dir)
 
         self.generator = self.dataset
+        
 
     def _train_implementation(self):
 
@@ -175,14 +198,20 @@ class Approximator(BaseTrainer):
         self.device = self._configure_device(self.cuda)
         self.model  = self.model.to(self.device)
 
+        
+        scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=1000, gamma=0.5, last_epoch=-1)
+
         # Start approximating
         for epoch in self.epochs:
 
-
+            # Generate online data 
             self.generator.generate_batch()
 
-
+            # Train for one batch
             training_result = self._train_epoch(epoch)
+
+            # Change the learning rate
+            scheduler.step()
 
             if self.tensorboard:
                 self.writer.add_scalars("Loss", {"training": training_result["loss"]}, epoch)
@@ -204,7 +233,7 @@ class Approximator(BaseTrainer):
                                                                         training_result["param"][2]))
                 logging.info('_____________________________________________________')
 
-        self.loss = training_result["loss"] 
+        self.loss.append(training_result["loss"] )
         
         if self.tensorboard:
             self.writer.close()
@@ -223,9 +252,9 @@ class Trainer(BaseTrainer):
 
         self.device = self._configure_device(self.cuda)
 
-        # if torch.cuda.device_count() > 1:
-        #     print("Using", torch.cuda.device_count(), "GPUs")
-        #     self.model = nn.DataParallel(self.model)
+        #if torch.cuda.device_count() > 1:
+        #    print("Using", torch.cuda.device_count(), "GPUs")
+        #    self.model = nn.DataParallel(self.model, device_ids=[0, 1])
 
         self.model  = self.model.to(self.device)
 
@@ -256,7 +285,189 @@ class Trainer(BaseTrainer):
                                                                         validation_result["param"][2]))
                 logging.info('_____________________________________________________')
 
-        self.loss = validation_result["loss"] 
+            self.loss.append(np.array(validation_result))
         
         if self.tensorboard:
             self.writer.close()
+
+
+class Mixed(BaseTrainer):
+
+    def __init__(self, model, config, criterion, optimizer, dataset, model_dir):
+
+        super().__init__(model, config, criterion, optimizer, dataset, model_dir)
+
+        self.training_generator     = self.dataset[0]
+        self.validation_generator   = self.dataset[1]
+
+        self.n_superepochs  = self.config.params.n_datasets
+        self.superepochs = range(1, self.n_superepochs+1)
+
+    def _train_implementation(self):
+
+        # Initialize generator for MATLAB data
+        #self.generator.initialize_session()
+
+        # Initialize parallel processing pool
+        #self.training_generator.initialize_pool()
+        #self.validation_generator.initialize_pool()
+
+
+        # Generate validation data
+        self.validation_generator.generate_batch()
+        #self.validation_generator.kill_pool()
+
+
+        # Send model to cuda
+        self.device = self._configure_device(self.cuda)
+        self.model  = self.model.to(self.device)
+        #self.net = torch.nn.DataParallel(self.model, device_ids=[self.device])
+        
+        scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=self.n_epochs, gamma=0.5, last_epoch=-1)
+
+        for superepoch in self.superepochs:
+
+            self.train_loader, self.val_loader = self._split_data(self.dataset, self.validation, self.train_fraction)
+
+            # Generate online data 
+            self.training_generator.generate_batch()
+
+            # Start approximating
+            for epoch in self.epochs:
+
+                # Train for one batch
+                training_result     = self._train_epoch(epoch)
+                validation_result   = self._validate_epoch(epoch)
+
+
+                # Change the learning rate
+                scheduler.step()
+
+                iteration = (self.n_epochs)*(superepoch-1) + epoch
+
+                if self.tensorboard:
+                    self.writer.add_scalars("Loss", {"training": training_result["loss"], "validation": validation_result["loss"]}, iteration)
+
+                    self.writer.add_scalars("Parameter-wise", {"D": validation_result["param"][0], 
+                                                            "C": validation_result["param"][1], 
+                                                            "α": validation_result["param"][2]}, iteration)
+                    
+                ############### MANUAL PRINTING #####################
+                if self.verbose:
+                    logging.info('                                                      ')
+
+                    logging.info('Superepoch: %d | Epoch:  %d | Tot. Epoch: %d | Loss: %.4f | Val. Loss: %.4f' % (superepoch, 
+                                                                                                                  epoch, 
+                                                                                                                  iteration, 
+                                                                                                                  training_result["loss"], 
+                                                                                                                  validation_result["loss"]))
+
+                    logging.info('MSE for   | D: %.4f | C: %.4f | α: %.4f' % (validation_result["param"][0], 
+                                                                            validation_result["param"][1], 
+                                                                            validation_result["param"][2]))
+                    logging.info('_____________________________________________________')
+
+
+            # Save state dictionary
+            torch.save(self.model.state_dict(), self.save_path)
+
+            # Record loss for plotting
+            self.loss.append(np.array(validation_result))
+        
+        if self.tensorboard:
+            self.writer.close()
+
+        # Convert loss to numpy array and save
+        self.loss = np.array(self.loss)
+        np.save(self.loss, os.path.join(self.save_path, "loss.npy"))
+        
+        self.training_generator.kill_pool()
+
+
+class Incrementer(BaseTrainer):
+
+    def __init__(self, model, config, criterion, optimizer, dataset, model_dir):
+
+        super().__init__(model, config, criterion, optimizer, dataset, model_dir)
+
+        self.training_generator     = self.dataset[0]
+        self.validation_generator   = self.dataset[1]
+
+        #self.n_superepochs  = self.config.params.n_datasets
+        #self.superepochs = range(1, self.n_superepochs+1)
+
+    def _train_implementation(self):
+
+
+        # Initialize pool
+        self.training_generator.initialize_pool()
+
+        # Generate validation data
+        self.validation_generator.generate_batch()
+        
+        # Generate data
+        self.training_generator.generate_batch()
+
+        # Send model to cuda
+        self.device = self._configure_device(self.cuda)
+        self.model  = self.model.to(self.device)
+
+        #self.net = torch.nn.DataParallel(self.model, device_ids=[self.device])
+        
+        scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=2*self.n_epochs, gamma=0.5, last_epoch=-1)
+
+        self.train_loader, self.val_loader = self._split_data(self.dataset, self.validation, self.train_fraction)
+
+        # Start training
+        for epoch in self.epochs:
+
+            # Train for one batch
+            training_result     = self._train_epoch(epoch)
+            validation_result   = self._validate_epoch(epoch)
+
+
+            # Change the learning rate
+            scheduler.step()
+            #iteration = (self.n_epochs)*(superepoch-1) + epoch
+
+            if self.tensorboard:
+                self.writer.add_scalars("Loss", {"training": training_result["loss"], "validation": validation_result["loss"]}, epoch)
+                self.writer.add_scalars("Parameter-wise", {"D": validation_result["param"][0], 
+                                                        "C": validation_result["param"][1], 
+                                                        "α": validation_result["param"][2]}, epoch)
+                
+            ############### MANUAL PRINTING #####################
+            if self.verbose:
+                logging.info('                                                      ')
+                logging.info('Epoch:  %d | Loss: %.4f | Val. Loss: %.4f' % (epoch, 
+                                                                            training_result["loss"], 
+                                                                            validation_result["loss"]))
+
+                logging.info('MSE for   | D: %.4f | C: %.4f | α: %.4f' % (validation_result["param"][0], 
+                                                                        validation_result["param"][1], 
+                                                                        validation_result["param"][2]))
+                logging.info('_____________________________________________________')
+
+            # Augment the data with 10% new samples
+            self.training_generator.augment_batch()
+
+            # Save state dictionary
+            if (epoch % 100) == 0:
+                saved_dir = self.save_path
+                if not os.path.exists(saved_dir):
+                    os.makedirs(saved_dir)
+
+
+                torch.save(self.model.state_dict(), os.path.join(saved_dir,str(epoch)+".pt"))
+
+            # Record loss for plotting
+            self.loss.append(np.array(validation_result))
+        
+        if self.tensorboard:
+            self.writer.close()
+
+        # Convert loss to numpy array and save
+        self.loss = np.array(self.loss)
+        np.save(os.path.join(self.save_path, "loss.npy"), self.loss)
+        
+        self.training_generator.kill_pool()

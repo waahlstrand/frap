@@ -1,10 +1,12 @@
 import numpy as np
 import json
 import logging
+import os
 import ast
 from data.datasets import *
 from models.spatiotemporal import *
 from models.temporal import *
+from trainer import Trainer, Mixed, Approximator, Incrementer
 from models.resnet import resnet18
 
 class Configuration(dict):
@@ -95,12 +97,41 @@ def get_dataloaders(mode, data_path, validation):
 
         return train, None
 
+def get_trainer(trainer_name, model, config, criterion, optimizer, dataset, model_dir):
+
+    if trainer_name == "trainer":
+        trainer = Trainer(model, config, criterion, optimizer, dataset, model_dir)
+    elif trainer_name == "approximator":
+        trainer = Approximator(model, config, criterion, optimizer, dataset, model_dir)
+    elif trainer_name == "mixed":
+        trainer = Mixed(model, config, criterion, optimizer, dataset, model_dir)
+    elif trainer_name == "incrementer":
+        trainer = Incrementer(model, config, criterion, optimizer, dataset, model_dir)
+    else:
+        raise NotImplementedError("Trainer not available.")
+
+    return trainer
+
 def get_optimizer(model, optimizer_name, params):
+    """A utility function for fetching the optimizer.
+    
+    Arguments:
+        model {nn.Module} -- A PyTorch module with parameters to be optimized
+        optimizer_name {String} -- The name of the optimizer, either "adam" or "sgd"
+        params {Configuration} -- A Configuration object with parameter attributes
+    
+    Returns:
+        torch.optim -- A PyTorch optimizer object
+    """
 
     if optimizer_name == "adam":
-        optimizer = torch.optim.Adam(model.parameters(), lr=params.lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
+        optimizer   = torch.optim.Adam(model.parameters(), lr=params.lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=params.decay, amsgrad=False)
     elif optimizer_name == "sgd":
-        optimizer   = torch.optim.SGD(model.parameters(), lr=params.lr, momentum=params.momentum, nesterov=True)
+        optimizer   = torch.optim.SGD(model.parameters(), lr=params.lr, momentum=params.momentum, nesterov=True, weight_decay=params.decay)
+    elif optimizer_name == "rmsprop":
+        optimizer   = torch.optim.RMSprop(model.parameters(), lr=params.lr, alpha=0.99, eps=1e-08, weight_decay=params.decay, momentum=0, centered=False)
+    else:
+        raise NotImplementedError("Optimizer not available.")
 
     return optimizer
 
@@ -124,7 +155,7 @@ def get_dataset(source, data_path, directory, mode, use_transform, params):
     
     if source == "temporal":
 
-        dataset = RecoveryTrainingDataset(data_path)
+        dataset = RecoveryDataset(data_path)
 
     elif source == "spatiotemporal":
         
@@ -138,6 +169,53 @@ def get_dataset(source, data_path, directory, mode, use_transform, params):
                                   transform=use_transform,
                                   noise_level=params.noise_level, 
                                   n_workers=params.batch_size)
+
+    elif source == "mixed":
+
+        dataset = MixedMatlabGenerator(dataset_size = params.dataset_size,
+                                       batch_size=params.batch_size, 
+                                        directory=directory, 
+                                        mode=mode, 
+                                        transform=use_transform,
+                                        noise_level=params.noise_level, 
+                                        n_workers=params.batch_size)
+    elif source == "fromfiles":
+        shape = ast.literal_eval(params.shape)
+
+
+        dataset = TransferFromFiles(dataset_size = params.dataset_size,
+                                       batch_size=params.batch_size, 
+                                        directory=directory, 
+                                        mode=mode, 
+                                        transform=use_transform,
+                                        noise_level=params.noise_level, 
+                                        n_workers=params.batch_size,
+                                        shape=shape
+                                        )
+
+    elif source == "mixed_separate":
+            shape = ast.literal_eval(params.shape)
+
+            training = TransferFromFiles(dataset_size = params.dataset_size,
+                                       batch_size=params.batch_size, 
+                                        directory=os.path.join(directory, "train"), 
+                                        mode=mode, 
+                                        transform=use_transform,
+                                        noise_level=params.noise_level, 
+                                        n_workers=32,
+                                        shape=shape)
+            
+            validation = TransferFromFiles(dataset_size = int((1-params.train_fraction)*params.dataset_size),
+                                       batch_size=params.batch_size, 
+                                        directory=os.path.join(directory, "val"), 
+                                        mode=mode, 
+                                        transform=use_transform,
+                                        noise_level=params.noise_level, 
+                                        n_workers=32,
+                                        shape=shape)
+
+            dataset = (training, validation)
+
 
     return dataset
 
@@ -166,22 +244,30 @@ def get_model(model_name, params):
         model = LSTM_to_FFNN(hidden_size = params.n_hidden)
     elif model_name == "resnet18":
         model = resnet18(in_channels=1, dimension=3, num_classes=3)
-    elif model_name == "voxnet":
-        model = vx.VoxNet(params.batch_size, 3)
+    elif model_name == "resnet183d":
+        model = resnet183d(in_channels=1, dimension=3, num_classes=3)
+    elif model_name == "convfundo":
+        model = ConvFundo(params.batch_size, input_shape=shape)
     elif model_name == "tratt":
         model = Tratt(params.batch_size, shape=shape)
     elif model_name == "top_heavy_tratt":
         model = TopHeavyTratt(params.batch_size, shape=shape)
-    elif model_name == "carl":
-        model = Carl(params.batch_size, input_shape=shape)
+    elif model_name == "i2d":
+        model = I2D(params.batch_size, input_shape=shape)
     elif model_name == "Net":
         model = Net(params.batch_size, input_shape=shape)
+    elif model_name == "c3d":
+        model = C3D(params.batch_size, input_shape=shape)
     elif model_name == "fundo":
         model = Fundo(params.batch_size, shape=shape)
-    elif model_name == "fouriernet":
-        model = FourierNet(params.batch_size, input_shape=shape)
+    elif model_name == "lrcn":
+        model = LRCN(params.batch_size, input_shape=shape)
     elif model_name == "fouriertratt":
         model = FourierTratt(params.batch_size, shape=shape)
+    elif model_name == "downsampler":
+        model = Downsampler(params.batch_size, shape=shape)
+    elif model_name == "timesampled":
+        model = TimeSampled(params.batch_size, input_shape=shape)
     else:
         raise NotImplementedError("Model not implemented.")
 
