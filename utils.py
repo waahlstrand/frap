@@ -77,6 +77,18 @@ def str_to_bool(s):
     else:
          raise ValueError 
 
+
+def minmax(x, minimum, maximum):
+
+    y = (x-minimum)/(maximum-minimum)
+
+    return y
+
+def inverse_minmax(y, minimum, maximum):
+
+    x = y * (maximum-minimum) + minimum
+
+
 def get_dataloaders(mode, data_path, validation):
 
     if mode == "rcs":

@@ -457,8 +457,9 @@ class Incrementer(BaseTrainer):
                 if not os.path.exists(saved_dir):
                     os.makedirs(saved_dir)
 
+                state = {'epoch': epoch+1, 'model': self.model.state_dict(), 'optimizer': self.optimizer.state_dict()}
 
-                torch.save(self.model.state_dict(), os.path.join(saved_dir,str(epoch)+".pt"))
+                torch.save(state, os.path.join(saved_dir,str(epoch)+".pt"))
 
             # Record loss for plotting
             self.loss.append(np.array(validation_result))
