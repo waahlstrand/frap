@@ -26,6 +26,7 @@ def train(config, model_dir):
         torch.manual_seed(2222)
 
     params          = config.params
+    pretrain        = config.pretrain
     data_path       = config.data_path
     source          = config.source
     mode            = config.mode
@@ -41,15 +42,14 @@ def train(config, model_dir):
     use_transform   = utils.str_to_bool(config.transform)
     use_val         = utils.str_to_bool(config.validation)
 
-    ############### INITIALISE MODEL ######################
-    model       = utils.get_model(model_name, params)
-
     # Define a loss function. reduction='none' is elementwise loss, later summed manually
     criterion   = nn.MSELoss(reduction='none')
 
-    #writer = SummaryWriter()
+    ############### INITIALISE MODEL ######################
+    #model       = utils.get_model(model_name, pretrain_path, params)
     # Define an optimizer
-    optimizer   = utils.get_optimizer(model, optimizer_name, params)
+    #optimizer   = utils.get_optimizer(model, optimizer_name, params)
+    model, optimizer = utils.get_model_and_optimizer(model_name, optimizer_name, pretrain, params)
 
     ############## GET DATALOADERS ########################
     # Get dataset of recovery curves

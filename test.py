@@ -25,8 +25,8 @@ from models.temporal import *
 #model = Net(batch_size=64, input_shape=(1, 110, 20, 20)).cuda()
 #model = resnet183d(in_channels=1, num_classes=3, dimension=3).cuda("cuda:0")
 #model = TopHeavyTratt(batch_size=16).to("cuda:0")
-model = TimeSampled(batch_size=1, input_shape=(1, 110, 256, 256)).cuda()
-X = torch.rand((4, 1, 110, 256, 256)).cuda()
+model = Tratt(batch_size=32).cuda()
+X = torch.rand((32, 1, 110, 256, 256)).cuda()
 print(model(X).shape)
 
-#summary(model, (1, 110, 256, 256))
+#summary(model, (1, 110))

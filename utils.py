@@ -167,7 +167,7 @@ def get_dataset(source, data_path, directory, mode, use_transform, params):
     
     if source == "temporal":
 
-        dataset = RecoveryDataset(data_path)
+        dataset = TemporalDataset(data_path)
 
     elif source == "spatiotemporal":
         
@@ -250,37 +250,71 @@ def get_model(model_name, params):
 
     if model_name == "cnn1d":
         model = CNN1d(batch_size = params.batch_size, n_filters=params.n_filters, n_hidden=params.n_hidden)
+    elif model_name == "curves":
+        model = Curves(batch_size = params.batch_size, n_hidden=params.n_hidden, shape=shape)
     elif model_name == "fc":
         model = FC(batch_size = params.batch_size, n_hidden=params.n_hidden)
     elif model_name == "lstm":
         model = LSTM_to_FFNN(hidden_size = params.n_hidden)
-    elif model_name == "resnet18":
-        model = resnet18(in_channels=1, dimension=3, num_classes=3)
-    elif model_name == "resnet183d":
-        model = resnet183d(in_channels=1, dimension=3, num_classes=3)
     elif model_name == "convfundo":
         model = ConvFundo(params.batch_size, input_shape=shape)
     elif model_name == "tratt":
         model = Tratt(params.batch_size, shape=shape)
     elif model_name == "top_heavy_tratt":
         model = TopHeavyTratt(params.batch_size, shape=shape)
-    elif model_name == "i2d":
-        model = I2D(params.batch_size, input_shape=shape)
-    elif model_name == "Net":
-        model = Net(params.batch_size, input_shape=shape)
-    elif model_name == "c3d":
-        model = C3D(params.batch_size, input_shape=shape)
     elif model_name == "fundo":
         model = Fundo(params.batch_size, shape=shape)
-    elif model_name == "lrcn":
-        model = LRCN(params.batch_size, input_shape=shape)
-    elif model_name == "fouriertratt":
-        model = FourierTratt(params.batch_size, shape=shape)
     elif model_name == "downsampler":
         model = Downsampler(params.batch_size, shape=shape)
     elif model_name == "timesampled":
         model = TimeSampled(params.batch_size, input_shape=shape)
+    elif model_name == "tratt_pretrained":
+        state = torch.load("/home/sms/vws/frappe/saved/longtime/2k/States/states")
+        model = Tratt(batch_size=16)
+        model.load_state_dict(state)
+        model.train()
     else:
         raise NotImplementedError("Model not implemented.")
 
+
     return model
+
+
+def get_model_and_optimizer(model_name, optimizer_name, pretrain, params):
+    """A utility function to get both model and optimizer, with support for starting from 
+    a pretrained checkpoint state.
+    
+    Arguments:
+        model_name {str} -- The name of the model
+        optimizer_name {str} -- The name of the optimizer
+        pretrain {Configuration} -- A Configuration dict with settings for the pretraining
+        params {Configuration} -- A Configuration dict of parameters to the model and optmizer
+    
+    Returns:
+        torch.nn.Module -- Returns a PyTorch module.
+    """
+
+    pretrain_from_checkpoint = str_to_bool(pretrain.from_checkpoint)
+
+    # Load template model and optimizer
+    model = get_model(model_name, params)
+    optimizer = get_optimizer(model, optimizer_name, params)
+
+    if pretrain_from_checkpoint:
+
+            # Get full path to states
+            path = pretrain.path
+
+            # Load checkpoint data
+            checkpoint = torch.load(path)
+
+            # Apply to model and optimizer
+            model.load_state_dict(checkpoint['model_state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+
+
+            #epoch = checkpoint['epoch']
+            #loss = checkpoint['loss']
+    
+
+    return model, optimizer

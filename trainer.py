@@ -285,8 +285,25 @@ class Trainer(BaseTrainer):
                                                                         validation_result["param"][2]))
                 logging.info('_____________________________________________________')
 
+
+            # Save state dictionary
+            if (epoch % 100) == 0:
+                saved_dir = self.save_path
+                if not os.path.exists(saved_dir):
+                    os.makedirs(saved_dir)
+
+                state = {'epoch': epoch+1, 'model': self.model.state_dict(), 'optimizer': self.optimizer.state_dict()}
+
+                torch.save(state, os.path.join(saved_dir,str(epoch)+".pt"))
+
+            # Record loss for plotting
             self.loss.append(np.array(validation_result))
         
+
+        self.loss = np.array(self.loss)
+        np.save(os.path.join(self.save_path, "loss.npy"), self.loss)
+        
+
         if self.tensorboard:
             self.writer.close()
 
