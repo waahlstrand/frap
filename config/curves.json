@@ -1,6 +1,6 @@
 {
-    "job_name": "fc",
-    "model_name": "fc",
+    "job_name": "curves",
+    "model_name": "curves",
     "trainer_name": "trainer",
     "optimizer_name": "sgd",
 
@@ -11,16 +11,18 @@
 
     "params": {
 
-        "n_epochs" : 2000,
+        "n_epochs" : 1000,
         "n_datasets": 10,
-        "lr": 0.001,
-        "momentum": 0.99,
+        "n_filters": 32,
+        "n_hidden": 64,
+        "lr": 0.00001,
+        "momentum": 0.000001,
         "decay": 0,
         "noise_level": 0.2,
         "train_fraction": 0.7,
         "dataset_size": 4096,
-        "batch_size": 8,
-        "shape": "(1, 110)"
+        "batch_size": 16,
+        "shape": "(31, 110)"
 
     },
     "verbose": "True",
@@ -28,7 +30,7 @@
     "gpu": 0,
     "source": "temporal",
     "tensorboard": "True",
-    "data_path": "/home/sms/vws/data/temporal",
+    "data_path": "/home/sms/Documents/MATLAB/frappe/test/",
     "validation": "True",
     "clip": 0,
     "mode": "temporal",
