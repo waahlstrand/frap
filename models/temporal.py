@@ -2,15 +2,143 @@ import torch
 import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
-#from torch.utils.data import Dataset, DataLoader
 
 
 
+class Curves(nn.Module):
+
+    def __init__(self, batch_size, n_hidden = 16, shape = (31, 110)):
+
+        super(Curves, self).__init__()
+
+        self.batch_size         = batch_size
+        self.output_size        = 3
+        self.shape              = shape
+        self.sequence_length    = shape[1]
+        self.n_hidden           = n_hidden
+
+        self.body       = nn.Sequential(nn.Linear(31*110, 8*self.n_hidden),
+                                        nn.ReLU(),
+                                        nn.Linear(8*self.n_hidden, 8*self.n_hidden),
+                                        nn.ReLU(),
+                                        nn.Linear(8*self.n_hidden, 16*self.n_hidden),
+                                        nn.ReLU(),
+                                        nn.Linear(16*self.n_hidden, 16*self.n_hidden),
+                                        nn.ReLU(),
+                                        nn.Linear(16*self.n_hidden, 4*self.n_hidden),
+                                        nn.ReLU(),
+                                        nn.Linear(4*self.n_hidden, 3)
+                                        )   
+    
+    def forward(self, x):
+
+
+        x = torch.flatten(x, start_dim=1)
+
+        x = self.body(x)
+
+
+        return x
+
+
+
+class CNN1d(nn.Module):
+
+    def __init__(self, batch_size, n_hidden = 32, n_filters = 32, shape = (1, 110)):
+
+        super(CNN1d, self).__init__()
+
+        self.batch_size         = batch_size
+        self.output_size        = 3
+        self.shape              = shape
+        self.sequence_length    = shape[1]
+        self.n_filters          = n_filters
+        self.n_hidden           = n_hidden
+
+        self.body       = nn.Sequential(nn.Conv1d(1, out_channels=self.n_filters, kernel_size=2, stride=1),
+                                        nn.BatchNorm1d(self.n_filters),
+                                        nn.ReLU(),
+                                        nn.MaxPool1d(kernel_size=3),
+                                        nn.Conv1d(in_channels=self.n_filters, out_channels=2*self.n_filters, kernel_size=2),
+                                        nn.ReLU(),
+                                        nn.Conv1d(in_channels=2*self.n_filters, out_channels=2*self.n_filters, kernel_size=2),
+                                        nn.ReLU(),
+                                        nn.BatchNorm1d(2*self.n_filters),
+                                        nn.MaxPool1d(kernel_size=3),
+                                        )   
+
+        flat_size       = self._get_conv_output_size(shape)
+
+        self.flatten = torch.flatten
+
+        self.head       = nn.Sequential(nn.Linear(flat_size, 8*self.n_hidden),
+                                        nn.ReLU(),
+                                        nn.Linear(8*self.n_hidden, 2*self.n_hidden),
+                                        nn.ReLU(),
+                                        nn.Linear(2*self.n_hidden, self.output_size))
+    
+    def forward(self, x):
+
+
+        x = self.body(x)
+
+        x = self.flatten(x, start_dim=1)
+
+        y = self.head(x)
+
+        return y
+
+    def _forward_through_body(self, x):
+        
+        x = self.body(x)
+
+        return x
+
+    def _get_conv_output_size(self, shape):
+        
+        with torch.no_grad():
+
+            input = torch.rand(self.batch_size, *shape)
+            output = self._forward_through_body(input)
+            size = output.data.view(self.batch_size, -1).size(1)
+
+            return size
+
+class FC(nn.Module):
+
+    def __init__(self, batch_size, n_hidden = 16, shape = (1, 110)):
+        super(FC, self).__init__()
+
+        self.batch_size         = batch_size
+        self.output_size        = 3
+        self.shape              = shape
+        self.sequence_length    = shape[1]
+        self.n_hidden           = n_hidden
+
+        self.flatten = torch.flatten
+
+        self.head   = nn.Sequential(nn.Linear(self.sequence_length, 8*self.n_hidden),
+                                    nn.ReLU(),
+                                    nn.Linear(8*self.n_hidden, 16*self.n_hidden),
+                                    nn.ReLU(),
+                                    nn.Linear(16*self.n_hidden, 16*self.n_hidden),
+                                    nn.ReLU(),
+                                    nn.Linear(16*self.n_hidden, 8*self.n_hidden),
+                                    nn.ReLU(),
+                                    nn.Linear(8*self.n_hidden, self.output_size))
+    
+    def forward(self, x):
+
+        x = self.flatten(x, start_dim=1)
+
+        y = self.head(x)
+
+        return y
 
 
 class LSTM_to_FFNN(nn.Module):
 
-    def __init__(self, input_size, hidden_size, output_size, dropout = 0, n_layers = 2):
+    def __init__(self, hidden_size, input_size=1, output_size=3, dropout = 0, n_layers = 2):
         """A simple LSTM for training on FRAP recovery curves, taking 1D data. Uses 
         custom number of layers for deeper training to perform regression on three parameters.
         
@@ -81,64 +209,4 @@ class LSTM_to_FFNN(nn.Module):
         y = self.linear(output)
 
         return y
-
-""" class CNN1d(nn.Module):
-
-    def __init__(self, n_filters = 64, n_hidden = 16):
-        
-        super(CNN1d, self).__init__()
-
-        #self.sequence_length    = sequence_length
-        self.input_size         = 1
-        self.output_size        = 3
-        self.sequence_length    = 110
-        self.n_filters          = n_filters
-        self.n_hidden           = n_hidden
-
-        self.kernel_size         = 2
-        self.maxpool_kernel_size = 3
-        self.stride              = 1
-
-
-        self.conv1 = Convolution1D(self.input_size, 
-                                   self.n_filters, 
-                                   self.sequence_length, 
-                                   self.kernel_size, 
-                                   self.maxpool_kernel_size)
-
-        self.conv2 = Convolution1D(self.n_filters, 
-                                   2*self.n_filters, 
-                                   self.conv1.maxpool_size, 
-                                   self.kernel_size, 
-                                   self.maxpool_kernel_size)
-
-
-        self.flatten = torch.flatten
-
-        self.linear1 = nn.Linear(self.conv2.output_size(), 4*self.n_hidden)
-        self.linear2 = nn.Linear(4*self.n_hidden, self.n_hidden)
-        self.linear3 = nn.Linear(self.n_hidden, self.output_size)
-
-    def forward(self, x):
-
-        # Preprocess and assert correct dimensions
-        batch_size = x.shape[0]
-        x = x.view(batch_size, 1, -1)
-
-        # First convolutional layer 
-        x = self.conv1(x)
-
-        # Second convolutional layer
-        x = self.conv2(x)
-
-        # Flatten the data, except batch-dimension
-        x = self.flatten(x, start_dim=1, end_dim=2)
-
-        # Fully connected layer
-        x = F.relu(self.linear1(x))
-        x = F.relu(self.linear2(x))
-        y = self.linear3(x)
-
-        return y
- """
 

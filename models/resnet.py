@@ -130,17 +130,22 @@ class ResNet(nn.Module):
                 norm_layer = nn.BatchNorm2d
             elif dimension == 3:
                 norm_layer = nn.BatchNorm3d
+
         self._norm_layer = norm_layer
         self.output_size = num_classes
         self.inplanes = 64
         self.dilation = 1
+
+
         if replace_stride_with_dilation is None:
             # each element in the tuple indicates if we should replace
             # the 2x2 stride with a dilated convolution instead
             replace_stride_with_dilation = [False, False, False]
+
         if len(replace_stride_with_dilation) != 3:
             raise ValueError("replace_stride_with_dilation should be None "
                              "or a 3-element tuple, got {}".format(replace_stride_with_dilation))
+
         self.groups = groups
         self.base_width = width_per_group
 
@@ -151,11 +156,10 @@ class ResNet(nn.Module):
             self.conv1 = nn.Conv2d(in_channels, self.inplanes, kernel_size=7, stride=2, padding=3,
                                bias=False)
         elif dimension == 3:
-            self.conv1 = nn.Conv3d(in_channels, self.inplanes, kernel_size=7, stride=2, padding=3,
+            self.conv1 = nn.Conv3d(in_channels, self.inplanes, kernel_size=(3, 7, 7), stride=(1, 2, 2), padding=3,
                                bias=False)
 
         self.bn1 = norm_layer(self.inplanes)
-
 
         self.relu = nn.ReLU(inplace=True)
 
@@ -229,8 +233,8 @@ class ResNet(nn.Module):
 
     def forward(self, x):
 
-        if self.inplanes > 1:
-            x = x.squeeze()
+        #if self.inplanes > 1:
+        #    x = x.squeeze()
 
         x = self.conv1(x)
         x = self.bn1(x)
@@ -248,11 +252,49 @@ class ResNet(nn.Module):
 
         return x
 
+
+class ResNet3D(ResNet):
+
+    def __init__(self, block, layers, in_channels=3, num_classes=1000, zero_init_residual=False,
+                 groups=1, width_per_group=64, replace_stride_with_dilation=None,
+                 norm_layer=None, dimension=2):
+
+        super(ResNet3D, self).__init__(block, layers, in_channels=in_channels, num_classes=num_classes, zero_init_residual=zero_init_residual,
+                 groups=groups, width_per_group=width_per_group, replace_stride_with_dilation=replace_stride_with_dilation,
+                 norm_layer=norm_layer, dimension=dimension)
+
+    def forward(self, x):
+
+        #if self.inplanes > 1:
+        #    x = x.squeeze()
+
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.maxpool(x)
+
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.layer4(x)
+
+        x = self.avgpool(x)
+        x = torch.flatten(x, 1)
+        x = self.fc(x)
+
+        return x
+
+
+
 def _resnet(arch, block, layers, pretrained, progress, **kwargs):
     model = ResNet(block, layers, **kwargs)
 
     return model
 
+def _resnet3d(arch, block, layers, pretrained, progress, **kwargs):
+    model = ResNet3D(block, layers, **kwargs)
+
+    return model
 
 def resnet18(pretrained=False, progress=True, **kwargs):
     r"""ResNet-18 model from
@@ -262,4 +304,14 @@ def resnet18(pretrained=False, progress=True, **kwargs):
         progress (bool): If True, displays a progress bar of the download to stderr
     """
     return _resnet('resnet18', BasicBlock, [2, 2, 2, 2], pretrained, progress,
+                   **kwargs)
+
+def resnet183d(pretrained=False, progress=True, **kwargs):
+    r"""ResNet-18 model from
+    `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+        progress (bool): If True, displays a progress bar of the download to stderr
+    """
+    return _resnet3d('resnet18', BasicBlock, [2, 2, 2, 2], pretrained, progress,
                    **kwargs)
