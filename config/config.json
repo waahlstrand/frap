@@ -1,24 +1,39 @@
 {
-    "job_name": "training",
-    "model_name": "cnn1d",
+    // All comments must be removed upon use
+    
+    "job_name": "unique name of the job",
+    "model_name": "name of the neural network model. e.g. downsampler",
+    "trainer_name": "name of the trainer object, e.g. incrementer",
+    "optimizer_name": "name of the optimizer, e.g. sgd",
+
+    "pretrain": {
+        "from_checkpoint": "False",
+        "path": ""
+    },
 
     "params": {
 
-        "n_epochs" : 10000,
-        "lr": 0.001,
-        "momentum": 0.7,
-        "n_filters": 16,
-        "n_hidden": 64,
-        "train_fraction": 0.8,
-        "batch_size": 256
+        "n_epochs" : 2000, //Number of epochs in mini-batch, online-offline, number of iterations in online training
+        "n_datasets": 10, //Number of super-epochs in mixed online-offline training
+        "lr": 0.001, //Learning rate
+        "momentum": 0.99, //Nesterov momentum, must be greater than 0
+        "decay": 0, //Weight decay, L1-regularization
+        "noise_level": 0.2, //Noise level in FRAP simulations
+        "train_fraction": 0.75, //Fraction of data to train on in training-validation split
+        "dataset_size": 16384, //Size of the dataset, must be base 2.
+        "batch_size": 16, //Batch size, must be base 2
+        "shape": "(1, 110, 256, 256)" //Shape of the FRAP data
 
     },
-    "verbose": "True",
-    "cuda": "True",
-    "gpu": 0,
-    "source": "temporal",
-    "tensorboard": "True",
-    "data_path": "/home/sms/vws/data/rcs",
-    "validation": "True"
-    
+    "verbose": "True", //Prints loss
+    "cuda": "True", //Uses a GPU
+    "gpu": 1, //Which GPU to use, 1 or 0
+    "source": "mixed_separate", //Which training method to use, e.g. temporal, spatiotemporal, generate or files_split, files_single
+    "tensorboard": "True", //Whether to make Tensorboard logs
+    "data_path": "", //If using source = temporal/spatiotemporal, then give the path to the data folder
+    "validation": "True", //Whether to use a validation dataset or not
+    "clip": 0, //Gradient clipping, not usable for all Trainers
+    "mode": "spatiotemporal", //Whether to generate temporal/rc or spatiotemporal/pixel/px data.
+    "transform":  "False" //Whether to use a pre-chosen augmentation transform
 }
+    

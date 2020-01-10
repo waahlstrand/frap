@@ -1,0 +1,32 @@
+{
+    "job_name": "convlstm",
+    "model_name": "convfundo",
+    "trainer_name": "mixed",
+    "optimizer_name": "sgd",
+
+    "params": {
+
+        "n_epochs" : 200,
+        "n_datasets": 7,
+        "lr": 0.0001,
+        "momentum": 0.99,
+        "decay": 0,
+        "noise_level": 0.1,
+        "train_fraction": 0.7,
+        "dataset_size": 1024,
+        "batch_size": 32,
+        "shape": "(1, 110, 256, 256)"
+
+    },
+    "verbose": "True",
+    "cuda": "True",
+    "gpu": 0,
+    "source": "mixed_separate",
+    "tensorboard": "True",
+    "data_path": "",
+    "validation": "True",
+    "clip": 0,
+    "mode": "spatiotemporal",
+    "transform":  "False"
+}
+    
