@@ -34,7 +34,7 @@ function success = generate_batch(noise_upper_bound, batch_size, directory, numb
 
 
 %%%% NUMBER OF PIXELS AND SIZE %%%%%%%%%%%
-pixel_size = 7.5e-07; % m
+pixel_size = 7.5980e-07; % m 7.5e-7
 number_of_pixels = 256; %256
 
 
@@ -42,7 +42,7 @@ number_of_pixels = 256; %256
 number_of_prebleach_frames = 10;
 number_of_bleach_frames = 4;
 number_of_postbleach_frames = 100;
-delta_t = 0.2; % s
+delta_t = 0.2650; % s 0.2
 number_of_pad_pixels = 128; %128
 
 %%%% BLEACH REGION, SIZE AND POSITION %%%%%
@@ -154,10 +154,8 @@ parfor current_worker = 1:number_of_workers
         [C_prebleach, C_postbleach] = signal_d(sys_param, exp_sim_param);
         
         % Augment with Gaussian noise
-        noise_prebleach = a + b*C_prebleach
-        C_prebleach = C_prebleach + sqrt(noise_prebleach).* randn(size(C_prebleach));
-        noise_postbleach = a + b*C_postbleach
-        C_postbleach = C_postbleach + sqrt(noise_postbleach) .* randn(size(C_postbleach));
+        C_prebleach     = C_prebleach + sqrt(a + b*C_prebleach).* randn(size(C_prebleach));
+        C_postbleach    = C_postbleach + sqrt(a + b*C_postbleach) .* randn(size(C_postbleach));
         
         
         

@@ -12,18 +12,20 @@ if __name__ == '__main__':
 
     # Parameter sets
     ##### CONSTANT PARAMETERS #####
-    n_epochs        = [100]
-    n_datasets      = [2]
-    dataset_size    = [32]
-    batch_size      = [64]
-    shape           = ["(1, 110, 256, 256)"]
-    noise_level     = [0.1]
+    n_epochs        = [850]
+    n_datasets      = [1]
+    dataset_size    = [65536]
+    batch_size      = [16]
+    shape           = ["(1, 110)"]
+    noise_level     = [0.2]
     train_fraction  = [0.7]
 
     ##### SEARCHABLE PARAMETERS #####
-    decay           = [0, 0.5]
-    lr              = [1e-5, 1e-4, 1e-3]
-    momentum        = [1e-8, 0.5, 0.99]
+    decay           = [0]
+    lr              = [1e-5, 1e-4]
+    momentum        = [1e-8, 0.99]
+    n_filters       = [16, 128]
+    n_hidden        = [32, 64]
     #kernel_size     = [2, 3]
     #channel         = [1, 16, 32]
 
@@ -36,8 +38,8 @@ if __name__ == '__main__':
                    'decay': decay,
                    'lr': lr, 
                    'momentum': momentum, 
-                   #'kernel_size': kernel_size, 
-                   #'channels': channel,
+                   'n_filters': n_filters,
+                   'n_hidden': n_hidden,
                    'noise_level': noise_level,
                    'train_fraction': train_fraction}
 
@@ -49,30 +51,38 @@ if __name__ == '__main__':
 
         # Main configuration
         main_config = {
-        "job_name": "tuning",
-        "model_name": "tratt",
+
+        "pretrain": {
+        "from_checkpoint": "False",
+        "path": ""
+        },
+
+        "job_name": "tuning_cnn1d",
+        "model_name": "cnn1d",
         "trainer_name": "trainer",
         "optimizer_name": "sgd",
         'params': params,
         "verbose": "True",
         "cuda": "True",
         "gpu": 0,
-        "source": "spatiotemporal",
+        "source": "temporal",
         "tensorboard": "True",
-        "data_path": "",
+        "data_path": "/home/sms/vws/data/temporal/",
         "validation": "True",
         "clip": 0,
-        "mode": "spatiotemporal",
+        "mode": "temporal",
         "transform":  "False"
         }
 
         jobs.append(main_config)
 
+        print(params)
+
 
     ########## START TRAINING ###########
     losses = []
     i = 0
-    for job in jobs:
+    for job in jobs[12:-1]:
         
         i = i + 1
         # Extract parameters
@@ -90,9 +100,6 @@ if __name__ == '__main__':
         logging.info("Starting new job...")  
         loss = train(config, model_dir)
 
-        # Print data to file and save
-        job.update({'loss': loss.data.tolist()})
-
         with open(os.path.join(model_dir,'config'+str(i)+'.json'), 'w') as fp:
             json.dump(job, fp)        
 
@@ -101,4 +108,4 @@ if __name__ == '__main__':
         
         logging.info("- Job finished.")  
 
-    print(losses)
+    #print(losses)

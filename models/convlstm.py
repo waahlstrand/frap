@@ -5,6 +5,8 @@ import torch.nn.functional as F
 
 
 class ConvLSTM(nn.Module):
+    """A ConvLSTM module, similar to an LSTM module, but with convolutional gates instead of linear ones.
+    """
 
     def __init__(self, n_input_channels, n_hidden_channels, kernel_size, n_layers=1, shape=(1, 110, 256, 256)):
 
@@ -19,7 +21,6 @@ class ConvLSTM(nn.Module):
 
         self.layers = []
 
-        # TODO: Implement multiple layers with different number of filters
         for idx in range(self.n_layers):
             if idx == 0: 
                 n_channels = self.n_input_channels
@@ -69,6 +70,8 @@ class ConvLSTM(nn.Module):
 
 
 class ConvLSTMCell(nn.Module):
+    """The cell of a ConvLSTM. The number of cells signifies the depth/number of layers of the LSTM.
+    """
 
     def __init__(self, n_channels, n_hidden_channels, kernel_size, size):
 

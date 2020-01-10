@@ -18,7 +18,7 @@
         "decay": 0,
         "noise_level": 0.2,
         "train_fraction": 0.75,
-        "dataset_size": 4096,
+        "dataset_size": 8196,
         "batch_size": 8,
         "shape": "(1, 110, 256, 256)"
 

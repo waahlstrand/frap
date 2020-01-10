@@ -5,17 +5,25 @@ import torch.nn as nn
 import utils
 from datetime import datetime
 import logging
-from trainer import Approximator, Trainer
 
+# Parse the arguments to the main program
 parser = argparse.ArgumentParser()
-
-#parser.add_argument("--data_path", default='data', help='Path to the data.')
 parser.add_argument('--config', default='test.json', help="Name of .json file")
-#parser.add_argument('--job_name', default='training', help="Name of job file.")
-#parser.add_argument("--verbose", default = 'True', help="Print log to terminal.")
+
 
 
 def train(config, model_dir):
+    """Given a Configuration object containing training settings and hyperparameters, the train method launches a Trainer instance
+    which trains a neural network model.
+    
+    Arguments:
+        config {Configuration} -- Configuration object of settings, from a JSON file.
+        model_dir {string} -- Path to the target directory of logs and results
+    
+    Returns:
+        loss {double} -- The final validation or training loss, depending on the Trainer object.
+    """
+
     # Record time
     now = datetime.now()
 
@@ -45,10 +53,8 @@ def train(config, model_dir):
     # Define a loss function. reduction='none' is elementwise loss, later summed manually
     criterion   = nn.MSELoss(reduction='none')
 
-    ############### INITIALISE MODEL ######################
-    #model       = utils.get_model(model_name, pretrain_path, params)
-    # Define an optimizer
-    #optimizer   = utils.get_optimizer(model, optimizer_name, params)
+    ############### INITIALISE MODEL AND OPTIMIZER ######################
+    # Define a model and optimizer pair
     model, optimizer = utils.get_model_and_optimizer(model_name, optimizer_name, pretrain, params)
 
     ############## GET DATALOADERS ########################
@@ -77,10 +83,11 @@ if __name__ == '__main__':
     # Parse arguments to program
     args = parser.parse_args()
 
+    # Get configuration JSON file
     config_name = args.config
     config_path = os.path.join("config/", config_name)
 
-    # Extract parameters
+    # Extract settings from JSON to a Configuration object
     config = utils.Configuration.from_nested_dict(config_path)
     
     job_name    = config.job_name

@@ -1,7 +1,6 @@
 from torchsummary import summary
 import torch
-from models.spatiotemporal import ConvLSTM, Net, I2D, TopHeavyTratt, ConvFundo, Tratt, TimeSampled
-from models.resnet import resnet18, resnet183d
+from models.spatiotemporal import *
 from models.temporal import *
 #from models.voxnet import VoxNet
 
@@ -25,8 +24,9 @@ from models.temporal import *
 #model = Net(batch_size=64, input_shape=(1, 110, 20, 20)).cuda()
 #model = resnet183d(in_channels=1, num_classes=3, dimension=3).cuda("cuda:0")
 #model = TopHeavyTratt(batch_size=16).to("cuda:0")
-model = Tratt(batch_size=32).cuda()
-X = torch.rand((32, 1, 110, 256, 256)).cuda()
+#model = Downsampler(2).cuda()
+model = Split(5)
+X = torch.rand((5, 1, 110))
 print(model(X).shape)
 
 #summary(model, (1, 110))

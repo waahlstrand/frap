@@ -6,20 +6,27 @@ import ast
 from data.datasets import *
 from models.spatiotemporal import *
 from models.temporal import *
-from trainer import Trainer, Mixed, Approximator, Incrementer
-from models.resnet import resnet18
+from trainer import Trainer, Mixed, OnlineTrainer, Incrementer
 
 class Configuration(dict):
     """ Dictionary subclass whose entries can be accessed by attributes
         (as well as normally).
     """
+    
     def __init__(self, *args, **kwargs):
         super(Configuration, self).__init__(*args, **kwargs)
         self.__dict__ = self
 
     @staticmethod
     def from_nested_dict(data):
-        """ Construct nested AttrDicts from nested dictionaries. """
+        """Construct nested AttrDicts from nested dictionaries or from a JSON file.
+        
+        Arguments:
+            data {dict, JSON} -- Either a dict or JSON path name.
+        
+        Returns:
+            Configuration -- A Configuration object.
+        """
         if isinstance(data, str) and ".json" in data:
             f = open(data)
             data = json.load(f)
@@ -34,14 +41,15 @@ class Configuration(dict):
 
 def set_logger(log_path):
     """Set the logger to log info in terminal and file `log_path`.
-    In general, it is useful to have a logger so that every output to the terminal is saved
-    in a permanent file. Here we save it to `model_dir/train.log`.
-    Example:
-    ```
-    logging.info("Starting training...")
-    ```
-    Args:
-        log_path: (string) where to log
+        In general, it is useful to have a logger so that every output to the terminal is saved
+        in a permanent file. Here we save it to `model_dir/train.log`.
+        Example:
+        ```
+        logging.info("Starting training...")
+        ```
+        
+    Arguments:
+        log_path {[type]} -- The destination directory where to log.
     """
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
@@ -79,42 +87,62 @@ def str_to_bool(s):
 
 
 def minmax(x, minimum, maximum):
+    """A function to for min-max normalization, such that the output is constrained
+    in the interval [0,1].
+    
+    Arguments:
+        x {np.array} -- A numpy array object with the data.
+        minimum {double} -- Minimum of the data
+        maximum {double} -- Maximum of the data
+    
+    Returns:
+        np.array -- Min-max normalized data
+    """
 
     y = (x-minimum)/(maximum-minimum)
 
     return y
 
 def inverse_minmax(y, minimum, maximum):
+    """A function to retrieve the original data normalized by min-max.
+    
+    Arguments:
+        y {np.array} -- Min-max normalized data
+        minimum {double} -- Minimum of the data
+        maximum {double} -- Maximum of the data
+
+    Returns:
+        np.array -- Original numpy array with the data
+    """
 
     x = y * (maximum-minimum) + minimum
 
+    return x
 
-def get_dataloaders(mode, data_path, validation):
-
-    if mode == "rcs":
-        if validation:
-            train = RecoveryTrainingDataset(data_path)
-            val = RecoveryValidationDataset(data_path)
-
-            return train, val
-
-        else:
-            train = RecoveryTrainingDataset(data_path)
-
-            return train, None
-    
-    elif mode == "spatiotemporal":
-        
-        train = SpatiotemporalDataset()
-
-        return train, None
 
 def get_trainer(trainer_name, model, config, criterion, optimizer, dataset, model_dir):
+    """A utility function for getting a Trainer object by name. Returns a Trainer object used to
+    wrap the training of neural networks.
+    
+    Arguments:
+        trainer_name {string} -- Name of the Trainer object
+        model {nn.Module} -- A PyTorch module with parameters to be optimized
+        criterion {nn.loss} -- Loss function to optimize with respect to
+        optimizer {nn.optimizer} -- Optimizer object
+        dataset {torch.utils.data.Dataset} -- A dataset object to use with dataloaders
+        model_dir {str} -- Directory path to the model
+    
+    Raises:
+        NotImplementedError: Thrown if the Trainer name is incorrect or the Trainer object does not exist.
+    
+    Returns:
+        Trainer -- Trainer object
+    """
 
     if trainer_name == "trainer":
         trainer = Trainer(model, config, criterion, optimizer, dataset, model_dir)
-    elif trainer_name == "approximator":
-        trainer = Approximator(model, config, criterion, optimizer, dataset, model_dir)
+    elif trainer_name == "approximator" or trainer_name == "online":
+        trainer = OnlineTrainer(model, config, criterion, optimizer, dataset, model_dir)
     elif trainer_name == "mixed":
         trainer = Mixed(model, config, criterion, optimizer, dataset, model_dir)
     elif trainer_name == "incrementer":
@@ -125,7 +153,7 @@ def get_trainer(trainer_name, model, config, criterion, optimizer, dataset, mode
     return trainer
 
 def get_optimizer(model, optimizer_name, params):
-    """A utility function for fetching the optimizer.
+    """A utility function for getting an optimizer for PyTorch neural networks.
     
     Arguments:
         model {nn.Module} -- A PyTorch module with parameters to be optimized
@@ -149,12 +177,19 @@ def get_optimizer(model, optimizer_name, params):
 
 
 def get_dataset(source, data_path, directory, mode, use_transform, params):
-    """Utility function for fetching the desired FRAP dataset. Divided into "temporal", 
+    """Utility function for getting the desired FRAP dataset. Divided into "temporal", 
     "spatiotemporal" and "generate", they generate train-test split PyTorch datasets and a 
     generator of unique training data from Matlab, respectively.
     
     Arguments:
-        source {str} -- Either "temporal", "spatiotemporal" or "generate".
+        source {str} -- The source of the data, either
+                        - "temporal" returns a recovery curve dataset from a directory
+                        - "spatiotemporal" returns a FRAP pixel dataset from a directory
+                        - "generate"
+                        - "mixed"
+                        - "files_single" returns a dataset of given size as a single binary file.
+                        - "files_split" returns a dataset of given size as one binary file for every sample. Suitable for big data.
+
         data_path {str} -- Path to the dataset samples
         directory {str} -- Path to the target directory of the generator
         mode {str} -- Either "temporal", "spatiotemporal", "all" or "Fourier", the type of data generated.
@@ -167,11 +202,11 @@ def get_dataset(source, data_path, directory, mode, use_transform, params):
     
     if source == "temporal":
 
-        dataset = TemporalDataset(data_path)
+        dataset = TemporalDataset(directory = data_path)
 
     elif source == "spatiotemporal":
         
-        dataset = SpatiotemporalDataset()
+        dataset = SpatiotemporalDataset(directory= data_path)
 
     elif source == "generate":
 
@@ -191,36 +226,31 @@ def get_dataset(source, data_path, directory, mode, use_transform, params):
                                         transform=use_transform,
                                         noise_level=params.noise_level, 
                                         n_workers=params.batch_size)
-    elif source == "fromfiles":
+
+    elif source == "fromfiles" or source == "files_single":
         shape = ast.literal_eval(params.shape)
 
 
-        dataset = TransferFromFiles(dataset_size = params.dataset_size,
-                                       batch_size=params.batch_size, 
+        dataset = FileMatlabGenerator(dataset_size = params.dataset_size,
                                         directory=directory, 
-                                        mode=mode, 
                                         transform=use_transform,
                                         noise_level=params.noise_level, 
                                         n_workers=params.batch_size,
                                         shape=shape
                                         )
 
-    elif source == "mixed_separate":
+    elif source == "mixed_separate" or source == "files_split":
             shape = ast.literal_eval(params.shape)
 
-            training = TransferFromFiles(dataset_size = params.dataset_size,
-                                       batch_size=params.batch_size, 
+            training = FileMatlabGenerator(dataset_size = params.dataset_size,
                                         directory=os.path.join(directory, "train"), 
-                                        mode=mode, 
                                         transform=use_transform,
                                         noise_level=params.noise_level, 
                                         n_workers=32,
                                         shape=shape)
             
-            validation = TransferFromFiles(dataset_size = int((1-params.train_fraction)*params.dataset_size),
-                                       batch_size=params.batch_size, 
+            validation = FileMatlabGenerator(dataset_size = int((1-params.train_fraction)*params.dataset_size),
                                         directory=os.path.join(directory, "val"), 
-                                        mode=mode, 
                                         transform=use_transform,
                                         noise_level=params.noise_level, 
                                         n_workers=32,
@@ -250,16 +280,16 @@ def get_model(model_name, params):
 
     if model_name == "cnn1d":
         model = CNN1d(batch_size = params.batch_size, n_filters=params.n_filters, n_hidden=params.n_hidden)
-    elif model_name == "curves":
-        model = Curves(batch_size = params.batch_size, n_hidden=params.n_hidden, shape=shape)
+    elif model_name == "split":
+        model = Split(n_hidden=params.n_hidden, shape=shape)
     elif model_name == "fc":
-        model = FC(batch_size = params.batch_size, n_hidden=params.n_hidden)
-    elif model_name == "lstm":
-        model = LSTM_to_FFNN(hidden_size = params.n_hidden)
+        model = FC(n_hidden=params.n_hidden)
     elif model_name == "convfundo":
         model = ConvFundo(params.batch_size, input_shape=shape)
     elif model_name == "tratt":
         model = Tratt(params.batch_size, shape=shape)
+    elif model_name == "tratt2convlstm":
+            model = Tratt2ConvLSTM(params.batch_size, shape=shape)
     elif model_name == "top_heavy_tratt":
         model = TopHeavyTratt(params.batch_size, shape=shape)
     elif model_name == "fundo":

@@ -10,8 +10,24 @@ import utils
 from torch.utils.data import Dataset, DataLoader
 
 class BaseTrainer:
+    """The BaseTrainer class, used as a template for training classes for neural networks. Implementation organized in two levels, epochs and training.
+    The epoch algorithm is unchanged between trainers, instead modify the _train_implementation method.
+    
+    Raises:
+        NotImplementedError: No training scheme implemented.
+    """
 
     def __init__(self, model, config, criterion, optimizer, dataset, model_dir):
+        """Initializes a BaseTrainer object
+        
+        Arguments:
+            model {torch.nn.Module} -- PyTorch neural network model
+            config {Configuration} -- Configuration object of settings.
+            criterion {nn.loss} -- Loss function to optimize.
+            optimizer {torch.optim} -- Optimizer object
+            dataset {torch.utils.data.Dataset} -- A dataset object to use with dataloaders
+            model_dir {str} -- Directory path to the model
+        """
 
         self.config     = config
 
@@ -43,6 +59,7 @@ class BaseTrainer:
 
         self.train_loader, self.val_loader = self._split_data(self.dataset, self.validation, self.train_fraction)
 
+        # If logging with tensorboard, create a new log directory and remove if existing.
         if self.tensorboard:
             tensorboard_dir = os.path.join(model_dir, "logs/")
 
@@ -59,6 +76,16 @@ class BaseTrainer:
             self.writer = SummaryWriter(tensorboard_dir)
 
     def _run_epoch(self, epoch, training, loader):
+        """Implementation of training the neural network for one epoch.
+        
+        Arguments:
+            epoch {int} -- The current epoch number
+            training {bool} -- If training (True) or validation (False)
+            loader {torch.utils.data.DataLoader} -- A DataLoader object with the training or validation data.
+        
+        Returns:
+            dict -- Dictionary with "loss" and "param", the total loss and parameter-wise loss respectively.
+        """
         
         if training:
             self.model.train()
@@ -69,7 +96,8 @@ class BaseTrainer:
         element_loss    = 0
         with torch.set_grad_enabled(training):
             for i, batch in enumerate(loader):
-
+                
+                # Zero the gradient due to accumulating batches.
                 self.optimizer.zero_grad()
 
                 if self.mode == "spatiotemporal" or self.mode == "temporal" or self.mode == "fourier":
@@ -94,12 +122,14 @@ class BaseTrainer:
                 loss = self.criterion(prediction, y)
 
                 if training:
+
                     # Backpropagate the loss
                     loss.mean().backward()
 
                     if self.clip > 0:
                         nn.utils.clip_grad_norm_(self.model.parameters(), self.clip)
 
+                    # Step the optimizer
                     self.optimizer.step()
 
                 #torch.nn.utils.clip_grad_norm_(model.parameters(), options.clip)
@@ -113,10 +143,26 @@ class BaseTrainer:
         return result
 
     def _train_epoch(self, epoch):
+        """Trains the neural network for one epoch.
+        
+        Arguments:
+            epoch {int} -- Current epoch number.
+        
+        Returns:
+            dict -- Dictionary with "loss" and "param", the total loss and parameter-wise loss respectively.
+        """
 
         return self._run_epoch(epoch, True, self.train_loader)
 
     def _validate_epoch(self, epoch):
+        """Validates the neural network for one epoch.
+        
+        Arguments:
+            epoch {int} -- Current epoch number.
+        
+        Returns:
+            dict -- Dictionary with "loss" and "param", the total validation loss and parameter-wise loss respectively.
+        """
 
         return self._run_epoch(epoch, False, self.val_loader)
 
@@ -124,9 +170,20 @@ class BaseTrainer:
         raise NotImplementedError
 
     def train(self):
+        """Trains the neural network according to an implemented scheme.
+        """
+
         self._train_implementation()
 
     def _configure_device(self, cuda):
+        """Sets the active CUDA device to use. Multiple devices are supported if they are balanced.
+        
+        Arguments:
+            cuda {bool} -- Whether to train on GPU (True) or CPU (False).
+        
+        Returns:
+            torch.device -- A torch.device objec.
+        """
 
         cuda_available = torch.cuda.is_available()
 
@@ -146,18 +203,31 @@ class BaseTrainer:
 
         return device
 
-    def _split_data(self, dataset, validation, train_size):
+    def _split_data(self, dataset, validation, train_fraction):
+        """Splits the dataset into training and validation according to given fraction.
+        
+        Arguments:
+            dataset {[type]} -- [description]
+            validation {[type]} -- [description]
+            train_fraction {[type]} -- [description]
+        
+        Returns:
+            [type] -- [description]
+        """
 
+        # If a validation dataset is desired
         if validation:
-
+            
+            # If given two separate datasets
             if  len(dataset) == 2:# or (not isinstance(dataset, list)) or (not isinstance(dataset, tuple)):
 
                 train_loader    = torch.utils.data.DataLoader(dataset[0], batch_size=self.batch_size, shuffle=True, num_workers=2)
                 val_loader      = torch.utils.data.DataLoader(dataset[1], batch_size=self.batch_size, shuffle=True, num_workers=2)
-                
+            
+            # Split into several dataloaders
             else:
 
-                n_train = int(train_size * len(self.dataset))
+                n_train = int(train_fraction * len(self.dataset))
                 n_val   = len(self.dataset) - n_train
 
                 train_dataset, val_dataset = torch.utils.data.random_split(dataset, [n_train, n_val])
@@ -177,9 +247,23 @@ class BaseTrainer:
         return train_loader, val_loader
 
 
-class Approximator(BaseTrainer):
+class OnlineTrainer(BaseTrainer):
+    """The OnlineTrainer inherits the BaseTrainer with the online training scheme, i.e. every iteration generating a small batch (mini-batch size)
+    of data and updating the gradient based on this batch. This method is prone to catastrophic forgetting, which means learning is overwritten 
+    each iteration.
+    """
 
     def __init__(self, model, config, criterion, optimizer, dataset, model_dir):
+        """Initializes an OnlineTrainer object.
+        
+        Arguments:
+            model {nn.Module} -- PyTorch neural network model
+            config {Configuration} -- Configuration object with settings
+            criterion {nn.loss} -- Loss function to optimize with respect to
+            optimizer {torch.optim} -- Optimizer object
+            dataset {torch.utils.data.Dataset} -- A dataset object to use with dataloaders
+            model_dir {str} -- Directory path to the model
+        """
 
         super().__init__(model, config, criterion, optimizer, dataset, model_dir)
 
@@ -187,6 +271,9 @@ class Approximator(BaseTrainer):
         
 
     def _train_implementation(self):
+        """Implemententation of the online training scheme. Generates a batch the size of a mini-batch of FRAP data in MATLAB every
+        iteration. The gradient is updated every iteration.
+        """
 
         # Initialize generator for MATLAB data
         #self.generator.initialize_session()
@@ -243,15 +330,32 @@ class Approximator(BaseTrainer):
 
 
 class Trainer(BaseTrainer):
+    """The Trainer inherits the BaseTrainer and implements the standard mini-batch training scheme, shuffling a dataset into mini-batches. These
+    minibatches are iterated over one epoch, for a given number of epoch. The gradient is updated after every mini-batch.
+    """
 
     def __init__(self, model, config, criterion, optimizer, dataset, model_dir):
+        """Initializes a Trainer object.
+        
+        Arguments:
+            model {nn.Module} -- PyTorch neural network model
+            config {Configuration} -- Configuration object with settings
+            criterion {nn.loss} -- Loss function to optimize with respect to
+            optimizer {torch.optim} -- Optimizer object
+            dataset {torch.utils.data.Dataset} -- A dataset object to use with dataloaders
+            model_dir {str} -- Directory path to the model
+        """
 
         super().__init__(model, config, criterion, optimizer, dataset, model_dir)
 
     def _train_implementation(self):
+        """Implements the mini-batch training scheme. The dataset is shuffled into a number of mini-batches. Iterating over all mini-batches constitutes one epoch.
+        The gradient is updated after each mini-batch, and the loss is calculated after every epoch.
+        """
 
         self.device = self._configure_device(self.cuda)
 
+        # Possible parallel implementation
         #if torch.cuda.device_count() > 1:
         #    print("Using", torch.cuda.device_count(), "GPUs")
         #    self.model = nn.DataParallel(self.model, device_ids=[0, 1])
@@ -309,8 +413,22 @@ class Trainer(BaseTrainer):
 
 
 class Mixed(BaseTrainer):
+    """The Mixed trainer inherits the BaseTrainer and implements the mixed online-offline training. Every super-epoch a dataset is generated,
+    which is iterated a number of epochs in a mini-batch scheme. This method increases the number of hyperparameters 
+    (size of the dataset, number of super-epochs, frequency of super-epochs) and struggles with forgetting at the start of every super-epoch.
+    """
 
     def __init__(self, model, config, criterion, optimizer, dataset, model_dir):
+        """Initializes a Mixed object.
+        
+        Arguments:
+            model {nn.Module} -- PyTorch neural network model
+            config {Configuration} -- Configuration object with settings
+            criterion {nn.loss} -- Loss function to optimize with respect to
+            optimizer {torch.optim} -- Optimizer object
+            dataset {torch.utils.data.Dataset} -- A dataset object to use with dataloaders
+            model_dir {str} -- Directory path to the model
+        """
 
         super().__init__(model, config, criterion, optimizer, dataset, model_dir)
 
@@ -321,6 +439,9 @@ class Mixed(BaseTrainer):
         self.superepochs = range(1, self.n_superepochs+1)
 
     def _train_implementation(self):
+        """Implements the mixed online-offline training scheme. Generates a FRAP dataset in MATLAB every super-epoch, which is iterated in a
+        mini-batch scheme for a given number of epochs.
+        """
 
         # Initialize generator for MATLAB data
         #self.generator.initialize_session()
@@ -340,6 +461,7 @@ class Mixed(BaseTrainer):
         self.model  = self.model.to(self.device)
         #self.net = torch.nn.DataParallel(self.model, device_ids=[self.device])
         
+        # Schedules an adaptive learning rate decrease every super-epoch
         scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=self.n_epochs, gamma=0.5, last_epoch=-1)
 
         for superepoch in self.superepochs:
@@ -402,8 +524,21 @@ class Mixed(BaseTrainer):
 
 
 class Incrementer(BaseTrainer):
+    """The Incrementer trainer inherits the BaseTrainer object and implements a mini-batch training scheme where the dataset is augmented with 
+    a fraction of newly generated data at the end of every epoch.
+    """
 
     def __init__(self, model, config, criterion, optimizer, dataset, model_dir):
+        """Initializes an Incrementer object.
+        
+        Arguments:
+            model {nn.Module} -- PyTorch neural network model
+            config {Configuration} -- Configuration object with settings
+            criterion {nn.loss} -- Loss function to optimize with respect to
+            optimizer {torch.optim} -- Optimizer object
+            dataset {torch.utils.data.Dataset} -- A dataset object to use with dataloaders
+            model_dir {str} -- Directory path to the model
+        """
 
         super().__init__(model, config, criterion, optimizer, dataset, model_dir)
 
@@ -414,6 +549,10 @@ class Incrementer(BaseTrainer):
         #self.superepochs = range(1, self.n_superepochs+1)
 
     def _train_implementation(self):
+        """Implements a modified mini-batch training scheme, where a dataset is shuffled into random mini-batches, and an iteration over all these is
+        called an epoch. After each epoch, the gradient is updated, and a random fraction of the dataset is updated with newly generated samples. 
+        The aim is to regularize the training and increase the dataset size.
+        """
 
 
         # Initialize pool
@@ -444,7 +583,7 @@ class Incrementer(BaseTrainer):
 
 
             # Change the learning rate
-            scheduler.step()
+            #scheduler.step()
             #iteration = (self.n_epochs)*(superepoch-1) + epoch
 
             if self.tensorboard:
@@ -469,7 +608,7 @@ class Incrementer(BaseTrainer):
             self.training_generator.augment_batch()
 
             # Save state dictionary
-            if (epoch % 100) == 0:
+            if (epoch % 50) == 0:
                 saved_dir = self.save_path
                 if not os.path.exists(saved_dir):
                     os.makedirs(saved_dir)
@@ -477,6 +616,7 @@ class Incrementer(BaseTrainer):
                 state = {'epoch': epoch+1, 'model': self.model.state_dict(), 'optimizer': self.optimizer.state_dict()}
 
                 torch.save(state, os.path.join(saved_dir,str(epoch)+".pt"))
+
 
             # Record loss for plotting
             self.loss.append(np.array(validation_result))

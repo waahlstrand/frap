@@ -67,8 +67,16 @@ class RecoveryDataset(torch.utils.data.Dataset):
 
 
 class SpatiotemporalDataset(torch.utils.data.Dataset):
+    """A torch.utils.data.Dataset that given a directory collects binary spatio-temporal FRAP data and returns numpy arrays.
+    """
 
-    def __init__(self, directory="/home/sms/vws/data/spatiotemporal/"):
+    def __init__(self, directory="/home/sms/vws/data/spatiotemporal/", regex=r'x_+.*\.bin'):
+        """Initializes a SpatiotemporalDataset from a directory of simulated binary FRAP files.
+        
+        Keyword Arguments:
+            directory {str} -- Path of the directory with a subfolder /data/ with simulated data. (default: {"/home/sms/vws/data/spatiotemporal/"})
+            regex {regexp} -- regexp object to find all files in directory. (default: {r'x_+.*\.bin'})
+        """
         super(SpatiotemporalDataset, self).__init__()
 
         self.shape      = (1, 110, 256, 256)
@@ -77,27 +85,39 @@ class SpatiotemporalDataset(torch.utils.data.Dataset):
         self.width          = 256
         self.depth          = 110
         self.n_params   = 3
-        self.length     = 4096
         self.directory  = directory
-        
-        #X = np.fromfile("/home/sms/magnusro/frap_ann/generate_clean_data/x_1.bin", dtype = np.float32)
-        #y = np.fromfile("/home/sms/magnusro/frap_ann/generate_clean_data/y_1.bin", dtype = np.float32)
 
-        #self.X = np.reshape(X, (-1, *self.shape))
-        #self.y = np.reshape(y, (-1, self.n_params))
+        # List all files in paired order
+        self.x_files =  [f for f in os.listdir(os.path.join(self.directory, "data")) if re.search(regex, f)]
+        self.y_files =  ["y_"+f.partition("_")[2] for f in self.x_files]
+
+        self.length = len(self.x_files)
 
     def __len__(self):
+        """The dataset size, i.e. the number of files in directory.
+        
+        Returns:
+            int -- The number of files in the directory.
+        """
             
         return self.length
 
     def __getitem__(self, idx):
+        """Indexing function for the dataset. Indexes the files as ordered in the directory, since order is unimportant.
+        Opens the binary files and returns a numpy array of the FRAP data in order (channels, time, width, height).
+        
+        Arguments:
+            idx {int} -- Sample index to extract.
+        
+        Returns:
+            dict -- A dictionary with elements *X*, *y*, the sample FRAP data and parameter targets respectively.
+        """
 
-        # List all files in paired order
-        x_files =  [f for f in os.listdir(os.path.join(self.directory, "data")) if re.match(r'x+.*\.bin', f)]
-        y_files =  ["y_"+f.partition("_")[2] for f in x_files]
 
-        X_path = os.path.join(self.directory, "data", x_files[idx])
-        y_path = os.path.join(self.directory, "data", y_files[idx])
+        X_path = os.path.join(self.directory, "data", self.x_files[idx])
+        y_path = os.path.join(self.directory, "data", self.y_files[idx])
+
+        # Extract data as numpy arrays
         y = np.fromfile(y_path, dtype=np.float32)
         y = np.reshape(y, (self.n_params))
         X = np.fromfile(X_path, dtype=np.float32)
@@ -109,29 +129,98 @@ class SpatiotemporalDataset(torch.utils.data.Dataset):
         return batch
 
 
-class TemporalDataset(torch.utils.data.Dataset):
-    """A pre-generated dataset of 2^16 recovery curves, collected as single files x, y.
-    The dataset supports batch training with torch.utils.data.Dataloader.
+class ExperimentalDataset(torch.utils.data.Dataset):
+    """A torch.utils.data.Dataset of experimental FRAP files given a directory.
     """
 
-    def __init__(self, directory="/home/sms/vws/data/temporal/data"):
-        """Initializes the recovery dataset given a root directory.
+    def __init__(self, directory, mode = "pixel", regex=r'x_+.*\.bin'):
+        """Initializes an ExperimentalDataset from a directory of binary experimental FRAP files.
         
         Arguments:
-            root_dir {str} -- A root directory containing the recovery curve data.
+            directory {string} -- Path of the directory with a subfolder /data/ with experimental data.
+            mode {string} -- Setting whether to return pixel data or recovery curve data. (default: "pixel")
+        
+        Keyword Arguments:
+            regex {regexp} -- regexp object to find all files in directory. (default: {r'x_+.*\.bin'})
+        """
+        super(ExperimentalDataset, self).__init__()
+
+        self.shape      = (1, 110, 256, 256)
+        self.n_channels     = 1
+        self.height         = 256
+        self.width          = 256
+        self.depth          = 110
+        self.mode           = mode
+        self.n_params       = 3
+        self.directory      = directory
+
+        # List all files in paired order
+        self.x_files =  [f for f in os.listdir(os.path.join(self.directory, "data")) if re.search(regex, f)]
+
+        self.length = len(self.x_files)
+        
+
+    def __len__(self):
+        """The dataset size, i.e. the number of files in directory.
+        
+        Returns:
+            int -- The number of files in the directory.
+        """
+            
+        return self.length
+
+    def __getitem__(self, idx):
+        """Indexing function for the dataset. Indexes the files as ordered in the directory, since order is unimportant.
+        Opens the binary files and returns a numpy array of the FRAP data in order (channels, time, width, height) for
+        pixel data or (channels, time) for recovery curves.
+        
+        Arguments:
+            idx {int} -- Sample index to extract.
+        
+        Returns:
+            dict -- A dictionary with elements *X*, *file*, the sample FRAP data and file name respectively.
+        """
+
+        X_path = os.path.join(self.directory, "data", self.x_files[idx])
+        X = np.fromfile(X_path, dtype=np.float32)
+
+        # Reshape the data
+        if self.mode == "pixel" or self.mode == "px" or self.mode == "spatiotemporal":
+            X = np.reshape(X, (self.n_channels, self.depth, self.width, self.height), order="F")
+        elif self.mode == "rc" or self.mode == "temporal":
+            X = np.reshape(X, (self.n_channels, self.depth), order="F")
+
+        batch = {"X": X, "file": self.x_files[idx]}
+
+        return batch
+
+
+class TemporalDataset(torch.utils.data.Dataset):
+    """A torch.utils.data.Dataset that given a directory collects binary spatio-temporal FRAP data and returns numpy arrays.
+    """
+
+    def __init__(self, prefix = "x", directory="/home/sms/vws/data/temporal/data"):
+        """Initializes a TemporalDataset from a directory of binary simulated FRAP files.
+        
+        Arguments:
+            prefix {str} -- Pre-fix for the recovery curve files, often "rc" or "x". (default: "x")
+            directory {str} -- A root directory containing the recovery curve data.
         """
         
         super(TemporalDataset, self).__init__()
-
         self.shape      = (1, 110)
-        self.n_channels     = 31
+        self.n_channels     = 1
         self.depth          = 110
         self.n_params       = 3
-        #self.length     = 2 ** 16
         self.directory  = directory
         
         # List all files in paired order
-        self.x_files =  [f for f in os.listdir(os.path.join(self.directory, "data")) if re.match(r'x+.*\.bin', f)]
+        if prefix == "x":
+            regex = r'x+.*\.bin'
+        elif prefix == "rc":
+            regex = r'rc+.*\.bin'
+        
+        self.x_files =  [f for f in os.listdir(os.path.join(self.directory, "data")) if re.match(regex, f)]
         self.y_files =  ["y_"+f.partition("_")[2] for f in self.x_files]
 
         self.length = len(self.x_files)
@@ -146,17 +235,20 @@ class TemporalDataset(torch.utils.data.Dataset):
         return self.length
 
     def __getitem__(self, idx):
-        """Returns a single sample by index in the directory.
+        """Indexing function for the dataset. Indexes the files as ordered in the directory, since order is unimportant.
+        Opens the binary files and returns a numpy array of the FRAP data in order (channels, time).
         
         Arguments:
-            idx {int} -- An integer index, must be 0 =< idx < length
+            idx {int} -- Sample index to extract.
         
         Returns:
-            dict -- A dict of samples; "X" denoting features and "y" denoting targets.
+            dict -- A dictionary with elements *X*, *y*, the sample FRAP data and parameter targets respectively.
         """
 
         X_path = os.path.join(self.directory, "data", self.x_files[idx])
         y_path = os.path.join(self.directory, "data", self.y_files[idx])
+
+        # Extract the data as numpy arrays
         y = np.fromfile(y_path, dtype=np.float32)
         y = np.reshape(y, (self.n_params))
         X = np.fromfile(X_path, dtype=np.float32)
@@ -450,11 +542,24 @@ class MixedMatlabGenerator(torch.utils.data.Dataset):
 
 
 
-class TransferFromFiles(torch.utils.data.Dataset):
+class FileMatlabGenerator(torch.utils.data.Dataset):
+    """A torch.utils.data.Dataset of binary files generated by a MATLAB script."""
 
-    def __init__(self, dataset_size, batch_size, directory, shape, transform=False, mode="spatiotemporal", noise_level=0.1, n_workers = 32,):
+    def __init__(self, dataset_size, directory, shape, run_dir=r'~/Documents/MATLAB/frappe', scripts_dir=r'~/magnusro/frap_ann/frap_matlab', noise_level=0.2, n_workers = 32):
+        """Initializes the Dataset generator object.
         
-        self.batch_size     = batch_size
+        Arguments:
+            dataset_size {int} -- The number of samples to generate.
+            directory {string} -- The destination folder path to put the data. Appends a '/data/' to the path.
+            shape {tuple} -- A tuple of shape (channels, time, width, height).
+        
+        Keyword Arguments:
+            run_dir {regexp} -- A regexp path object with the directory of the generating script (default: {r'~/Documents/MATLAB/frappe'})
+            scripts_dir {regexp} -- A regexp path object with the directory of the FRAP simulation scripts (default: {r'~/magnusro/frap_ann/frap_matlab'})
+            noise_level {float} -- The noise level used when generating the FRAP data. (default: {0.2})
+            n_workers {int} -- The number of workers in the MATLAB parallel pool. (default: {32})
+        """
+        
         self.dataset_size   = dataset_size
         self.n_workers      = n_workers
         self.noise_level    = noise_level
@@ -463,58 +568,68 @@ class TransferFromFiles(torch.utils.data.Dataset):
         self.width          = shape[-2]
         self.depth          = shape[-3]
         self.n_params       = 3
-        self.crop_size      = 20
-        self.mode           = mode
         self.directory      = directory
-        self.transform      = transform 
         self.multiple_files = True
 
-        self.maximum        = np.array([np.log10(1e-9/np.power((7.5e-07),2)), 1.0, 0.95]).astype(np.float32)
-        self.minimum        = np.array([np.log10(1e-12/np.power((7.5e-07),2)), 0.5, 0.5]).astype(np.float32)
-        #self.transformer    = Occlusion(frequency=0.5)
-
+        ########### Initialize the MATLAB engine ###############
         logging.info("Initializing session. Entering MATLAB...")
         self.engine = self.initialize_session()
-        self.engine.addpath(r'~/Documents/MATLAB/frappe',nargout=0)
-        self.engine.addpath(r'~/magnusro/frap_ann/frap_matlab',nargout=0)
+
+        # Add paths to scripts
+        self.engine.addpath(run_dir,nargout=0)
+        self.engine.addpath(scripts_dir,nargout=0)
 
         logging.info("- Back in python. MATLAB session started.")
 
+
         self.batch  = None
 
-    #@staticmethod
     def initialize_session(self):
+        """Initializes an instance of the MATLAB engine from Python. Any calls to the MATLAB session must be done via this object.
+        
+        Returns:
+            matlab.engine -- A MATLAB engine object.
+        """
 
         return matlab.engine.start_matlab()
 
-    #@staticmethod
     def initialize_pool(self):
+        """Utility function to manually initialize the MATLAB parallel pool.
+        """
         
         logging.info("Initializing MATLAB parallel pool...")
         self.engine.initialize_pool(nargout=0)
         logging.info("- Pool initialized.")
 
-    #@staticmethod
     def kill_pool(self):
+        """Utility function to manually kill the MATLAB parallel pool.
+        """
 
         logging.info("Killing MATLAB parallel pool...")
         self.engine.kill_pool(nargout=0)
         logging.info("- Pool killed.")
 
     def generate_batch(self):
+        """Generates a batch (dataset) of binary FRAP files from MATLAB.
+        """
 
         success = self.engine.generate_batch(self.noise_level, self.dataset_size, self.directory, self.n_workers, 0, self.multiple_files, nargout=1)
 
     def augment_batch(self, fraction=0.05):
-
-
-        x_files =  [f for f in os.listdir(os.path.join(self.directory, "data")) if re.match(r'x_+.*\.bin', f)]
-
+        """Augments a batch with a fraction of new data. A random fraction of the files are overwritten with new data.
+        
+        Keyword Arguments:
+            fraction {float} -- The fraction of files to update. (default: {0.05})
+        """
         n_to_add = int(fraction*self.dataset_size)
 
+        # Collect all the files with a regular expression
+        x_files =  [f for f in os.listdir(os.path.join(self.directory, "data")) if re.match(r'x_+.*\.bin', f)]
+
+        # Generate a set of MATLAB files.
         success = self.engine.generate_batch(self.noise_level, n_to_add, self.directory, self.n_workers, 1, 1, nargout=1)
 
-        # Get temporary files
+        # Use temporary files in the dataset, not used when training
         x_temp_files =  [f for f in os.listdir(os.path.join(self.directory, "data")) if re.match(r'xtemp+.*\.bin', f)]
         y_temp_files =  ["ytemp_"+f.partition("_")[2] for f in x_temp_files]
 
@@ -523,7 +638,7 @@ class TransferFromFiles(torch.utils.data.Dataset):
         y_files_slice =  ["y_"+f.partition("_")[2] for f in x_files_slice]
 
 
-
+        # For each sample, overwrite the temporary file names with the new data file names.
         for i in range(len(x_files_slice)):
             
             x_old_path = os.path.join(self.directory, "data", x_temp_files[i])
@@ -538,41 +653,67 @@ class TransferFromFiles(torch.utils.data.Dataset):
 
 
     def __len__(self):
+        """Gets the number of samples in the dataset.
+        
+        Returns:
+            int -- Dataset size, i.e. the number of samples in the dataset.
+        """
 
         return self.dataset_size
 
     def __getitem__(self, idx):
+        """Indexing function for the dataset. Indexes the files as ordered in the directory, since order is unimportant.
+        Opens the binary files and returns a numpy array of the FRAP data in order (channels, time, width, height).
+        
+        Arguments:
+            idx {int} -- Sample index to extract.
+        
+        Returns:
+            dict -- A dictionary with elements *X*, *y*, the sample FRAP data and target parameters respectively.
+        """
 
         # List all files in paired order
         x_files =  [f for f in os.listdir(os.path.join(self.directory, "data")) if re.match(r'x_+.*\.bin', f)]
         y_files =  ["y_"+f.partition("_")[2] for f in x_files]
 
-        
-        if self.mode == "spatiotemporal":
+        # Get the full file paths
+        X_path = os.path.join(self.directory, "data", x_files[idx])
+        y_path = os.path.join(self.directory, "data", y_files[idx])
 
-            X_path = os.path.join(self.directory, "data", x_files[idx])
-            y_path = os.path.join(self.directory, "data", y_files[idx])
+        ######## Extract binary data as numpy arrays ##############
+        y = np.fromfile(y_path, dtype=np.float32)
+        y = np.reshape(y, (self.n_params))
 
-            y = np.fromfile(y_path, dtype=np.float32)
-            y = np.reshape(y, (self.n_params))
+        X = np.fromfile(X_path, dtype=np.float32)
+        X = np.reshape(X, (self.n_channels, self.depth, self.width, self.height))
 
-            X = np.fromfile(X_path, dtype=np.float32)
-            X = np.reshape(X, (self.n_channels, self.depth, self.width, self.height))
-
-            #y = utils.minmax(y, minimum=self.minimum, maximum=self.maximum)
-
-            batch = {"X": X,
-                    "y": y}
+        batch = {"X": X,
+                "y": y}
 
         return batch
 
         
 
 class Occlusion(object):
+    """An augmentation object to use with the imgaug library. Adds a random rectangular occlusion to each image in
+    a sequence.
+    """
 
-    def __init__(self, frequency=0.7, percent=0.1, size_percent=0.01):
+    def __init__(self, frequency=0.7, p=0.1, size_percent=0.01):
+        """Initializes an occlusion augmentation object.
+        
+        Keyword Arguments:
+            frequency {float} -- The frequency of occlusions in a sequence. (default: {0.7})
+            p {float} -- The probability of any pixel being dropped (i.e. set to zero) in  
+                         the lower-resolution dropout mask. (default: {0.1})
+            size_percent {float} -- The size of the lower resolution image from which to sample the dropout  
+                                    mask *in percent* of the input image.  
+                                    Note that this means that *lower* values of this parameter lead to  
+                                    *larger* areas being dropped (as any pixel in the lower resolution  
+                                    image will correspond to a larger area at the original resolution).   (default: {0.01})
+        """
         sometimes = lambda aug: iaa.Sometimes(frequency, aug)
-        self.seq = iaa.Sequential( sometimes (iaa.CoarseDropout(percent, size_percent=size_percent)))
+        self.seq = iaa.Sequential( sometimes (iaa.CoarseDropout(p, size_percent=size_percent)))
         
     def __call__(self, X):
 
